@@ -11,8 +11,8 @@ import {
 import logoImg from "../../assets/Parivartan_Logo.png";
 
 const LoginPage = ({ onLogin }) => {
-  const [email, setEmail] = useState("admin@parivartan.crm");
-  const [password, setPassword] = useState("admin123");
+  const [email, setEmail] = useState("crm@eparivartan.com");
+  const [password, setPassword] = useState("Password@123");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -37,15 +37,32 @@ const LoginPage = ({ onLogin }) => {
     setIsLoading(true);
     setError(null);
 
-    // Simulate Auth API
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
-    if (email === "admin@parivartan.crm" && password === "admin123") {
-      onLogin();
-    } else {
-      setError("Invalid Email or Password.");
-      setIsLoading(false);
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log("Login success:", data);
+        onLogin(data);
+      } else {
+        setError(data.message || "Invalid Email or Password");
+      }
+    } catch (error) {
+      console.error(error);
+      setError("Server error. Please try again.");
     }
+
+    setIsLoading(false);
   };
 
   return (
