@@ -11,7 +11,7 @@ import {
 import logoImg from "../../assets/Parivartan_Logo.png";
 
 const LoginPage = ({ onLogin }) => {
-  const [email, setEmail] = useState("chaitanya@parivartancrm.com");
+  const [email, setEmail] = useState("chaitanya@parivartan.crm");
   const [password, setPassword] = useState("Password@123");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

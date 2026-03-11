@@ -27,7 +27,6 @@ import {
   Info,
 } from "lucide-react";
 import { ANALYTICS_DATA, QUARTERLY_ANALYTICS_DATA } from "../../constants/mockData";
-import anandImg from "../../assets/Anand.png";
 
 const StatCard = ({ title, value, trend, trendUp, icon, description }) => (
   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 transition-all hover:-translate-y-1 hover:shadow-md group flex flex-col justify-between overflow-hidden relative">
@@ -87,7 +86,16 @@ const Dashboard = ({
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [showViewAllModal, setShowViewAllModal] = useState(false);
   const [viewAllTab, setViewAllTab] = useState("Today");
+  const [currentUser, setCurrentUser] = useState(null);
   const dropdownRef = useRef(null);
+
+  // Load current user from localStorage
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, []);
 
   const isToday = (date) => {
     const d = new Date(date);
@@ -202,7 +210,7 @@ const Dashboard = ({
         <div className="flex flex-row flex-wrap justify-between items-center gap-6">
           <div className="max-w-2xl shrink-0">
             <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-[#18254D] tracking-tight mb-1.5">
-              Welcome back, Anand
+              Welcome back, {currentUser?.full_name?.split(' ')[0] || 'Admin'}
             </h2>
             <p className="text-xs md:text-sm text-textMuted font-medium leading-relaxed">
               Let's build something remarkable today.
@@ -301,17 +309,25 @@ const Dashboard = ({
             <div className="flex-1 lg:flex-initial flex items-center justify-center sm:justify-end gap-2 px-2 min-w-max">
               <div className="text-right flex flex-col items-end">
                 <p className="text-xs font-bold text-primary leading-none">
-                  Anand
+                  {currentUser?.full_name?.split(' ')[0] || 'Admin'}
                 </p>
                 <p className="text-[9px] font-bold text-secondary  tracking-widest mt-0.5">
-                  Root
+                  {currentUser?.role || 'Admin'}
                 </p>
               </div>
-              <img
-                src={anandImg}
-                alt="Profile"
-                className="w-8 h-8 md:w-9 md:h-9 rounded-lg object-cover border border-slate-100 shadow-sm"
-              />
+              {currentUser?.image ? (
+                <img
+                  src={currentUser.image}
+                  alt="Profile"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-lg object-cover border border-slate-100 shadow-sm"
+                />
+              ) : (
+                <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-primary flex items-center justify-center border border-slate-100 shadow-sm">
+                  <span className="text-sm font-bold text-white">
+                    {currentUser?.full_name?.charAt(0).toUpperCase() || "A"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -539,32 +539,35 @@ const Settings = ({
                       }}
                     />
                   </div>
-                  <div className="text-center sm:text-left pt-2">
-                    <h3 className="text-2xl font-bold text-primary mb-1 tracking-tight">
-                      {profile.full_name}
-                    </h3>
-                    
-                    <span className="inline-block px-3 py-1 bg-secondary/10 text-secondary border border-secondary/20 rounded-md text-[10px]  font-bold tracking-widest">
-                      {profile.role}
-                    </span>
+                  <div className="text-center sm:text-left pt-2 flex-1">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-2xl font-bold text-primary mb-1 tracking-tight">
+                          {profile.full_name}
+                        </h3>
+                        <span className="inline-block px-3 py-1 bg-secondary/10 text-secondary border border-secondary/20 rounded-md text-[10px]  font-bold tracking-widest">
+                          {profile.role}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setIsProfileEditing(!isProfileEditing)}
+                        className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/40 hover:bg-slate-50 transition-all shrink-0"
+                        title="Edit profile"
+                        aria-label="Edit profile"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Profile Form */}
                 <div className="space-y-6">
                   <div>
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="mb-4">
                       <h4 className="text-[10px] font-bold text-slate-400  tracking-[0.2em] ml-1">
                         Basic Information
                       </h4>
-                      <button
-                        onClick={() => setIsProfileEditing(!isProfileEditing)}
-                        className="p-2 rounded-lg border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/40 hover:bg-slate-50 transition-all"
-                        title="Edit profile"
-                        aria-label="Edit profile"
-                      >
-                        <Edit2 size={16} />
-                      </button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                       <div className="space-y-2">
@@ -597,18 +600,8 @@ const Settings = ({
                         <input
                           type="text"
                           value={profile.role}
-                          onChange={(e) =>
-                            setProfile({
-                              ...profile,
-                              role: e.target.value,
-                            })
-                          }
-                          disabled={!isProfileEditing}
-                          className={`w-full px-4 py-3 border border-slate-100 rounded-xl transition-all text-sm font-bold ${
-                            isProfileEditing
-                              ? "bg-slate-50 focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none text-[#18254D]"
-                              : "bg-slate-50 border-slate-100 text-[#18254D] cursor-not-allowed opacity-80"
-                          }`}
+                          disabled
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[#18254D] cursor-not-allowed opacity-80 text-sm font-bold"
                         />
                       </div>
                       <div className="space-y-2">
@@ -631,16 +624,16 @@ const Settings = ({
                       <button
                         onClick={handleProfileSave}
                         disabled={isProfileSaved}
-                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 text-xs  tracking-widest font-bold disabled:opacity-70"
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-[#18254D] text-white rounded-full hover:bg-slate-800 transition-all active:scale-95 text-xs tracking-wider font-semibold disabled:opacity-70 shadow-lg shadow-primary/20"
                       >
                         {isProfileSaved ? (
                           <>
-                            <Check size={16} />
+                            <Check size={16} strokeWidth={2.5} />
                             Saved
                           </>
                         ) : (
                           <>
-                            <Save size={16} />
+                            <Save size={16} strokeWidth={2.5} />
                             Save Changes
                           </>
                         )}
