@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+  import React, { useState } from "react";
 import {
   User,
   Lock,
@@ -19,6 +19,7 @@ import {
   Zap,
   X,
 } from "lucide-react";
+import { BASE_URL } from "../../constants/config";
 import anandImg from "../../assets/Anand.png";
 import openaiLogo from "../../assets/openai_logo.png";
 import geminiLogo from "../../assets/gemini_logo.png";
@@ -190,9 +191,63 @@ const Settings = ({
   });
   const [isPasswordSaved, setIsPasswordSaved] = useState(false);
 
-  const handleProfileSave = () => {
-    setIsProfileSaved(true);
-    setIsProfileEditing(false);
+  const [showToast, setShowToast] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+
+  const handleProfileSave = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("full_name", profile.full_name);
+      formData.append("role", profile.role);
+      
+      if (selectedImageFile) {
+        formData.append("image", selectedImageFile);
+      }
+
+      const response = await fetch(
+        `${BASE_URL}/api/admin-users/update/${profile.id}`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      const contentType = response.headers.get("content-type");
+      let data;
+      
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Server returned non-JSON response:", text);
+        alert(`Server error: ${response.status}. Check console for details.`);
+        return;
+      }
+
+      if (response.ok) {
+        // Update profile with returned image URL if available
+        const updatedProfile = {
+          ...profile,
+          image: data.image || profile.image,
+        };
+        setProfile(updatedProfile);
+        // Update localStorage with new profile data
+        localStorage.setItem("user", JSON.stringify(updatedProfile));
+        setSelectedImageFile(null);
+        setIsProfileSaved(true);
+        setIsProfileEditing(false);
+        setShowToast(true);
+        setTimeout(() => {
+          setIsProfileSaved(false);
+          setShowToast(false);
+        }, 3000);
+      } else {
+        alert(data.message || "Failed to update profile");
+      }
+    } catch (error) {
+      console.error("Profile save error:", error);
+      alert("Server error while updating profile. Check console for details.");
+    }
   };
   const handleAiSettingsSave = () => {
     setIsAiSaved(true);
@@ -256,7 +311,7 @@ const Settings = ({
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin-users/update/${id}`,
+        `${BASE_URL}/api/admin-users/update/${id}`,
         {
           method: "POST",
           headers: {
@@ -376,11 +431,19 @@ const Settings = ({
                       htmlFor="profile-photo-upload"
                       className={`block ${isProfileEditing ? "cursor-pointer" : "cursor-default"}`}
                     >
-                      <img
-                        src={profile.image}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-2xl border-4 border-slate-100 object-cover shadow-md group-hover:shadow-lg transition-shadow"
-                      />
+                      {profile.image ? (
+                        <img
+                          src={profile.image}
+                          alt="Profile"
+                          className="w-24 h-24 rounded-2xl border-4 border-slate-100 object-cover shadow-md group-hover:shadow-lg transition-shadow"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-2xl border-4 border-slate-100 bg-primary flex items-center justify-center shadow-md">
+                          <span className="text-3xl font-bold text-white">
+                            {profile.full_name?.charAt(0).toUpperCase() || "U"}
+                          </span>
+                        </div>
+                      )}
                       {isProfileEditing && (
                         <div className="absolute inset-0 bg-[#18254D]/50 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <Camera className="text-white" size={24} />
@@ -396,11 +459,12 @@ const Settings = ({
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          setSelectedImageFile(file);
                           const reader = new FileReader();
                           reader.onloadend = () => {
                             setProfile((prev) => ({
                               ...prev,
-                              avatar: reader.result,
+                              image: reader.result,
                             }));
                           };
                           reader.readAsDataURL(file);
@@ -501,7 +565,8 @@ const Settings = ({
                     <div className="flex justify-end pt-5 border-t border-slate-100">
                       <button
                         onClick={handleProfileSave}
-                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 text-xs  tracking-widest font-bold"
+                        disabled={isProfileSaved}
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 text-xs  tracking-widest font-bold disabled:opacity-70"
                       >
                         {isProfileSaved ? (
                           <>
@@ -518,6 +583,20 @@ const Settings = ({
                     </div>
                   )}
                 </div>
+
+                {/* Toast Notification */}
+                {showToast && (
+                  <div className="fixed top-6 right-6 z-50 animate-fade-in">
+                    <div className="flex items-center gap-3 px-5 py-3 bg-primary text-white rounded-xl shadow-lg shadow-primary/30 border border-white/10">
+                      <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                        <Check size={14} className="text-white" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold tracking-wide">Saved Successfully</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
