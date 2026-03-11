@@ -1,0 +1,80 @@
+/* Global Typography Utilities and Resets */
+
+@layer base {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Refined Header Weights and Spacing */
+  h1 {
+    @apply font-bold text-3xl tracking-tighter;
+  }
+
+  h2 {
+    @apply font-semibold text-2xl tracking-tight;
+  }
+
+  h3 {
+    @apply font-semibold text-xl tracking-tight;
+  }
+
+  h4 {
+    @apply font-semibold text-lg;
+  }
+
+  /* Body Text */
+  p {
+    @apply font-normal leading-relaxed;
+  }
+}
+
+@layer components {
+  /* SaaS Professional Navigation Text */
+  .nav-link {
+    @apply font-medium text-sidebar-nav tracking-wide transition-colors duration-200;
+  }
+
+  /* Table Headers */
+  .table-th {
+    @apply font-semibold text-xs tracking-wider text-textMuted;
+  }
+
+  /* Dashboard Stats */
+  .stat-value {
+    @apply font-bold text-3xl tracking-tighter;
+  }
+
+  .stat-label {
+    @apply font-medium text-sm text-textMuted;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #18254d10;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #18254d20;
+  }
+}
