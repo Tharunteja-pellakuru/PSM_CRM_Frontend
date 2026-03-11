@@ -81,7 +81,11 @@ const ProjectOverviewWrapper = ({
 // Main Routing Component
 const AppRoutes = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    // Check localStorage on initial load
+    const user = localStorage.getItem("user");
+    return !!user;
+  });
 
   // State management for data
   const [clients, setClients] = useState(MOCK_CLIENTS);

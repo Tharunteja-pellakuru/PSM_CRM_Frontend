@@ -78,3 +78,15 @@
     background: #18254d20;
   }
 }
+
+/* Disable all page load animations */
+.animate-fade-in,
+.animate-fade-in-up,
+.animate-slide-left,
+.animate-pop,
+.animate-fade,
+.animate-slide {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
