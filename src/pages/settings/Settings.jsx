@@ -134,7 +134,7 @@ const Settings = ({
         onClick={() =>
           setActiveDropdown(activeDropdown === field ? null : field)
         }
-        className="w-full h-[46px] flex items-center justify-between px-4 bg-slate-50 border border-slate-200 rounded-xl hover:bg-white hover:border-secondary transition-all text-sm font-bold text-[#18254D] shadow-sm"
+        className="w-full h-[46px] flex items-center justify-between px-4 bg-white border border-slate-200 rounded-xl hover:border-secondary transition-all text-sm font-bold text-[#18254D] shadow-sm"
       >
         <div className="flex items-center gap-3">
           {Icon && <Icon size={16} className="text-secondary" />}
@@ -208,6 +208,46 @@ const Settings = ({
   const [adminToastMessage, setAdminToastMessage] = useState("");
   const [selectedImageFile, setSelectedImageFile] = useState(null);
 
+  // Generic toast state for all messages
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "success", // success, error
+  });
+
+  const showToastMessage = (message, type = "success") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 3000);
+  };
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+  });
+
+  const showConfirmModal = (title, message, onConfirm) => {
+    setConfirmModal({
+      show: true,
+      title,
+      message,
+      onConfirm,
+    });
+  };
+
+  const hideConfirmModal = () => {
+    setConfirmModal({
+      show: false,
+      title: "",
+      message: "",
+      onConfirm: null,
+    });
+  };
+
   const handleProfileSave = async () => {
     try {
       const formData = new FormData();
@@ -238,7 +278,7 @@ const Settings = ({
       } else {
         const text = await response.text();
         console.error("Server returned non-JSON response:", text);
-        alert(`Server error: ${response.status}. Check console for details.`);
+        showToastMessage(`Server error: ${response.status}. Check console for details.`, "error");
         return;
       }
 
@@ -260,11 +300,11 @@ const Settings = ({
           setShowToast(false);
         }, 3000);
       } else {
-        alert(data.message || "Failed to update profile");
+        showToastMessage(data.message || "Failed to update profile", "error");
       }
     } catch (error) {
       console.error("Profile save error:", error);
-      alert("Server error while updating profile. Check console for details.");
+      showToastMessage("Server error while updating profile. Check console for details.", "error");
     }
   };
   const handleAiSettingsSave = () => {
@@ -301,7 +341,7 @@ const Settings = ({
         } else {
           const text = await response.text();
           console.error("Server returned non-JSON response:", text);
-          alert(`Server error: ${response.status}. Check console for details.`);
+          showToastMessage(`Server error: ${response.status}. Check console for details.`, "error");
           return;
         }
 
@@ -331,19 +371,57 @@ const Settings = ({
           // Refresh the admin list
           fetchAdminUsers();
         } else {
-          alert(data.message || "Failed to create admin");
+          showToastMessage(data.message || "Failed to create admin", "error");
         }
       } catch (error) {
         console.error("Add admin error:", error);
-        alert("Server error while creating admin. Check console for details.");
+        showToastMessage("Server error while creating admin. Check console for details.", "error");
       }
     }
   };
 
   const handleDeleteAdmin = (id) => {
-    if (id !== "1") {
-      setAdmins(admins.filter((admin) => admin.id !== id));
-    }
+    showConfirmModal(
+      "Delete User",
+      "Are you sure you want to delete this user? This action cannot be undone.",
+      async () => {
+        hideConfirmModal();
+        try {
+          const response = await fetch(
+            `${BASE_URL}/api/admin-users/${id}`,
+            {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const contentType = response.headers.get("content-type");
+          let data;
+
+          if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+          } else {
+            const text = await response.text();
+            console.error("Server returned non-JSON response:", text);
+            showToastMessage(`Server error: ${response.status}. Check console for details.`, "error");
+            return;
+          }
+
+          if (response.ok) {
+            // Remove user from local state
+            setAdmins(admins.filter((admin) => admin.id !== id));
+            showToastMessage("User deleted successfully", "success");
+          } else {
+            showToastMessage(data.message || "Failed to delete user", "error");
+          }
+        } catch (error) {
+          console.error("Delete user error:", error);
+          showToastMessage("Server error while deleting user. Check console for details.", "error");
+        }
+      }
+    );
   };
 
   const handleStartEditAdmin = (admin) => {
@@ -407,15 +485,33 @@ const Settings = ({
               : admin,
           ),
         );
-
+        showToastMessage("Admin updated successfully", "success");
         handleCancelEditAdmin();
       } else {
-        alert(data.message || "Failed to update admin");
+        showToastMessage(data.message || "Failed to update admin", "error");
       }
     } catch (error) {
       console.error(error);
-      alert("Server error");
+      showToastMessage("Server error while updating admin", "error");
     }
+  };
+
+  const validatePassword = (password) => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+    const errors = [];
+    if (!minLength) errors.push("at least 8 characters");
+    if (!hasUpperCase) errors.push("one uppercase letter");
+    if (!hasNumber) errors.push("one number");
+    if (!hasSpecialChar) errors.push("one special character");
+
+    return {
+      isValid: minLength && hasUpperCase && hasNumber && hasSpecialChar,
+      errors,
+    };
   };
 
   const handleUpdatePassword = async () => {
@@ -425,7 +521,16 @@ const Settings = ({
       passwordData.confirmPassword
     ) {
       if (passwordData.newPassword !== passwordData.confirmPassword) {
-        alert("New passwords do not match");
+        showToastMessage("New passwords do not match", "error");
+        return;
+      }
+
+      const validation = validatePassword(passwordData.newPassword);
+      if (!validation.isValid) {
+        showToastMessage(
+          `Password must contain ${validation.errors.join(", ")}`,
+          "error"
+        );
         return;
       }
 
@@ -453,27 +558,24 @@ const Settings = ({
         } else {
           const text = await response.text();
           console.error("Server returned non-JSON response:", text);
-          alert(`Server error: ${response.status}. Check console for details.`);
+          showToastMessage(`Server error: ${response.status}. Check console for details.`, "error");
           return;
         }
 
         if (response.ok) {
-          setIsPasswordSaved(true);
-          setTimeout(() => {
-            setIsPasswordSaved(false);
-            setShowPasswordForm(false);
-            setPasswordData({
-              currentPassword: "",
-              newPassword: "",
-              confirmPassword: "",
-            });
-          }, 3000);
+          showToastMessage("Password updated successfully", "success");
+          setShowPasswordForm(false);
+          setPasswordData({
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          });
         } else {
-          alert(data.message || "Failed to update password");
+          showToastMessage(data.message || "Failed to update password", "error");
         }
       } catch (error) {
         console.error("Update password error:", error);
-        alert("Server error while updating password. Check console for details.");
+        showToastMessage("Server error while updating password. Check console for details.", "error");
       }
     }
   };
@@ -622,9 +724,9 @@ const Settings = ({
                             })
                           }
                           disabled={!isProfileEditing}
-                          className={`w-full px-4 py-3 border border-slate-100 rounded-xl transition-all text-sm font-bold ${
+                          className={`w-full h-[46px] px-4 border rounded-xl transition-all text-sm font-bold ${
                             isProfileEditing
-                              ? "bg-slate-50 focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none text-[#18254D]"
+                              ? "bg-white border-slate-200 focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none text-[#18254D] shadow-sm"
                               : "bg-slate-50 border-slate-100 text-[#18254D] cursor-not-allowed opacity-80"
                           }`}
                         />
@@ -638,7 +740,7 @@ const Settings = ({
                           type="text"
                           value={profile.role}
                           disabled
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[#18254D] cursor-not-allowed opacity-80 text-sm font-bold"
+                          className="w-full h-[46px] px-4 bg-slate-50 border border-slate-100 rounded-xl text-[#18254D] cursor-not-allowed opacity-80 text-sm font-bold"
                         />
                       </div>
                       <div className="space-y-2">
@@ -650,7 +752,7 @@ const Settings = ({
                           type="email"
                           value={profile.email}
                           readOnly
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-500 cursor-not-allowed opacity-80 text-sm font-bold"
+                          className="w-full h-[46px] px-4 bg-slate-50 border border-slate-100 rounded-xl text-slate-500 cursor-not-allowed opacity-80 text-sm font-bold"
                         />
                       </div>
                     </div>
@@ -661,7 +763,7 @@ const Settings = ({
                       <button
                         onClick={handleProfileSave}
                         disabled={isProfileSaved}
-                        className="flex items-center justify-center gap-2 px-6 py-3 bg-[#18254D] text-white rounded-full hover:bg-slate-800 transition-all active:scale-95 text-xs tracking-wider font-semibold disabled:opacity-70 shadow-lg shadow-primary/20"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all active:scale-95 text-[11px] font-bold disabled:opacity-70 shadow-lg shadow-primary/20"
                       >
                         {isProfileSaved ? (
                           <>
@@ -723,7 +825,7 @@ const Settings = ({
                     </div>
                     <button
                       onClick={() => setShowAddModelForm(!showAddModelForm)}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 text-xs font-bold tracking-widest shadow-lg shadow-primary/20"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all active:scale-95 text-[11px] font-bold tracking-wider shadow-lg"
                     >
                       <Plus size={16} />
                       ADD AI MODEL
@@ -749,7 +851,7 @@ const Settings = ({
                               setNewModel({ ...newModel, name: e.target.value })
                             }
                             placeholder="e.g., GPT-4o Mini"
-                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none transition-all text-sm font-bold"
+                            className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                           />
                         </div>
                         <CustomDropdown
@@ -785,7 +887,7 @@ const Settings = ({
                               })
                             }
                             placeholder="e.g., gpt-4o-mini, grok-2, claude-3-haiku"
-                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none transition-all text-sm font-bold"
+                            className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                           />
                         </div>
                         <div className="space-y-2">
@@ -803,7 +905,7 @@ const Settings = ({
                               })
                             }
                             placeholder="Enter API key for this model"
-                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 focus:outline-none transition-all text-sm font-bold"
+                            className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                           />
                         </div>
                       </div>
@@ -830,14 +932,14 @@ const Settings = ({
                             !newModel.modelId ||
                             !newModel.apiKey
                           }
-                          className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 text-xs font-bold  tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all active:scale-95 text-[11px] font-bold tracking-wider disabled:bg-primary/50 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                           <Check size={16} />
                           Add Model
                         </button>
                         <button
                           onClick={() => setShowAddModelForm(false)}
-                          className="px-6 py-2.5 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-all text-xs font-bold  tracking-widest"
+                          className="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-2xl hover:bg-slate-300 transition-all text-[11px] font-bold tracking-wider"
                         >
                           Cancel
                         </button>
@@ -847,6 +949,13 @@ const Settings = ({
 
                   {/* Models List */}
                   <div className="space-y-3">
+                    {aiModels.length === 0 && (
+                      <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                        <Bot size={48} className="mx-auto text-slate-300 mb-4" />
+                        <p className="text-slate-500 font-bold text-sm">No AI models configured</p>
+                        <p className="text-slate-400 text-xs mt-1">Add a new AI model to get started</p>
+                      </div>
+                    )}
                     {aiModels.map((model) => {
                       const providerLabels = {
                         openai: {
@@ -992,13 +1101,13 @@ const Settings = ({
                                     onUpdateAiModel(editModelData);
                                     setEditingModelId(null);
                                   }}
-                                  className="px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all text-xs font-bold  tracking-widest"
+                                  className="px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all text-[11px] font-bold tracking-wider"
                                 >
                                   Save
                                 </button>
                                 <button
                                   onClick={() => setEditingModelId(null)}
-                                  className="px-6 py-2.5 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-all text-xs font-bold  tracking-widest"
+                                  className="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-2xl hover:bg-slate-300 transition-all text-[11px] font-bold tracking-wider"
                                 >
                                   Cancel
                                 </button>
@@ -1078,20 +1187,20 @@ const Settings = ({
                   <button
                     onClick={handleAiSettingsSave}
                     disabled={!isAiEditing}
-                    className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold  tracking-widest transition-all ${
+                    className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-[11px] font-bold tracking-wider transition-all ${
                       isAiEditing
-                        ? "bg-primary text-white hover:bg-slate-800 active:scale-95"
+                        ? "bg-primary text-white hover:bg-slate-800 active:scale-95 shadow-lg"
                         : "bg-slate-100 text-slate-400 cursor-not-allowed"
                     }`}
                   >
                     {isAiSaved ? (
                       <>
-                        <Check size={16} />
+                        <Check size={16} strokeWidth={2.5} />
                         Saved
                       </>
                     ) : (
                       <>
-                        <Save size={16} />
+                        <Save size={16} strokeWidth={2.5} />
                         Save AI Settings
                       </>
                     )}
@@ -1118,9 +1227,9 @@ const Settings = ({
                   {!showPasswordForm ? (
                     <button
                       onClick={() => setShowPasswordForm(true)}
-                      className="text-xs font-bold  tracking-widest text-slate-500 hover:text-primary transition-colors flex items-center gap-2"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all active:scale-95 text-[11px] font-bold tracking-wider shadow-lg"
                     >
-                      <Lock size={14} />
+                      <Lock size={14} strokeWidth={2.5} />
                       Update Password
                     </button>
                   ) : (
@@ -1139,7 +1248,7 @@ const Settings = ({
                             })
                           }
                           placeholder="Enter current password"
-                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold"
+                          className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1156,7 +1265,7 @@ const Settings = ({
                             })
                           }
                           placeholder="Enter new password"
-                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold"
+                          className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                         />
                       </div>
                       <div className="space-y-2">
@@ -1173,29 +1282,20 @@ const Settings = ({
                             })
                           }
                           placeholder="Confirm new password"
-                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold"
+                          className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                         />
                       </div>
                       <div className="flex gap-3 pt-3">
                         <button
                           onClick={handleUpdatePassword}
-                          className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 text-xs font-bold  tracking-widest"
+                          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all active:scale-95 text-[11px] font-bold tracking-wider shadow-lg shadow-primary/20"
                         >
-                          {isPasswordSaved ? (
-                            <>
-                              <Check size={16} />
-                              Password Updated
-                            </>
-                          ) : (
-                            <>
-                              <Save size={16} />
-                              Update Password
-                            </>
-                          )}
+                          <Save size={16} strokeWidth={2.5} />
+                          Update Password
                         </button>
                         <button
                           onClick={() => setShowPasswordForm(false)}
-                          className="px-6 py-2.5 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-all text-xs font-bold  tracking-widest"
+                          className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all text-[11px] font-bold tracking-wider"
                         >
                           Cancel
                         </button>
@@ -1209,23 +1309,23 @@ const Settings = ({
             {/* TEAM & ADMINS TAB */}
             {activeTab === "team" && (
               <div className="space-y-8 animate-fade-in w-full">
-                <div>
-                  <h3 className="text-2xl font-bold text-primary mb-2 tracking-tight">
-                    Manage Team Members
-                  </h3>
-                  <p className="text-sm font-bold text-slate-500">
-                    View and manage administrators and team members.
-                  </p>
-                  {/* Add Admin Button */}
-                  <div className="flex justify-end mt-4">
-                    <button
-                      onClick={() => setShowAddAdminForm(!showAddAdminForm)}
-                      className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all active:scale-95 text-xs font-bold  tracking-widest"
-                    >
-                      <Plus size={16} />
-                      Add Admin
-                    </button>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-primary mb-2 tracking-tight">
+                      Manage Team Members
+                    </h3>
+                    <p className="text-sm font-bold text-slate-500">
+                      View and manage administrators and team members.
+                    </p>
                   </div>
+                  {/* Add Admin Button */}
+                  <button
+                    onClick={() => setShowAddAdminForm(!showAddAdminForm)}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all active:scale-95 text-[11px] font-bold tracking-wider shadow-lg shrink-0"
+                  >
+                    <Plus size={16} strokeWidth={2.5} />
+                    Add Admin
+                  </button>
                 </div>
 
                 {/* Add Admin Form */}
@@ -1246,7 +1346,7 @@ const Settings = ({
                             setNewAdmin({ ...newAdmin, name: e.target.value })
                           }
                           placeholder="Enter full name"
-                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold"
+                          className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                         />
                       </div>
                       <div className="space-y-2 lg:col-span-1">
@@ -1263,14 +1363,14 @@ const Settings = ({
                             })
                           }
                           placeholder="name@parivartan.crm"
-                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold"
+                          className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                         />
                       </div>
                       <CustomDropdown
                         label="Role"
                         value={newAdmin.role}
                         field="add_admin_role"
-                        options={["Admin", "Manager", "Moderator"]}
+                        options={["Admin", "Manager"]}
                         onChange={(val) =>
                           setNewAdmin({ ...newAdmin, role: val })
                         }
@@ -1297,14 +1397,14 @@ const Settings = ({
                     <div className="flex gap-3 pt-3">
                       <button
                         onClick={handleAddAdmin}
-                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 active:scale-95 transition-all text-xs font-bold  tracking-widest"
+                        className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 active:scale-95 transition-all text-[11px] font-bold tracking-wider shadow-lg shadow-primary/20"
                       >
-                        <Check size={16} />
+                        <Check size={16} strokeWidth={2.5} />
                         Add Admin
                       </button>
                       <button
                         onClick={() => setShowAddAdminForm(false)}
-                        className="px-6 py-2.5 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-all text-xs font-bold  tracking-widest"
+                        className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all text-[11px] font-bold tracking-wider"
                       >
                         Cancel
                       </button>
@@ -1315,7 +1415,7 @@ const Settings = ({
                 {/* Admins List */}
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-bold text-primary  tracking-[0.2em] ml-1">
-                    Current Administrators ({admins.length})
+                    Current Users ({admins.length})
                   </h4>
                   
                   {loadingAdmins ? (
@@ -1355,7 +1455,7 @@ const Settings = ({
                                         name: e.target.value,
                                       })
                                     }
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold"
+                                    className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                                   />
                                 </div>
                                 <div className="space-y-2">
@@ -1371,7 +1471,7 @@ const Settings = ({
                                         email: e.target.value,
                                       })
                                     }
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold"
+                                    className="w-full h-[46px] px-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-secondary/30 focus:border-secondary focus:outline-none transition-all text-sm font-bold shadow-sm"
                                   />
                                 </div>
                                 <CustomDropdown
@@ -1419,13 +1519,13 @@ const Settings = ({
                               <div className="flex gap-3 pt-2">
                                 <button
                                   onClick={() => handleSaveEditAdmin(admin.id)}
-                                  className="px-6 py-2.5 bg-primary text-white rounded-xl hover:bg-slate-800 transition-all text-xs font-bold  tracking-widest"
+                                  className="px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all text-[11px] font-bold tracking-wider shadow-lg"
                                 >
                                   Save
                                 </button>
                                 <button
                                   onClick={handleCancelEditAdmin}
-                                  className="px-6 py-2.5 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-all text-xs font-bold  tracking-widest"
+                                  className="px-4 py-2.5 border border-slate-200 text-slate-600 rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all text-[11px] font-bold tracking-wider"
                                 >
                                   Cancel
                                 </button>
@@ -1520,6 +1620,55 @@ const Settings = ({
           </div>
         </div>
       </div>
+
+      {/* Generic Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-6 right-6 z-50 animate-fade-in">
+          <div className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg border min-w-[280px] ${
+            toast.type === "success"
+              ? "bg-primary text-white shadow-primary/30 border-white/10"
+              : "bg-red-500 text-white shadow-red-500/30 border-white/10"
+          }`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+              toast.type === "success" ? "bg-white/20" : "bg-white/20"
+            }`}>
+              {toast.type === "success" ? (
+                <Check size={14} className="text-white" />
+              ) : (
+                <X size={14} className="text-white" />
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-xs font-bold tracking-wide">{toast.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={hideConfirmModal} />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full animate-pop border border-slate-100">
+            <h3 className="text-lg font-bold text-primary mb-2">{confirmModal.title}</h3>
+            <p className="text-sm text-slate-600 mb-6">{confirmModal.message}</p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={hideConfirmModal}
+                className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-[11px] font-bold tracking-wider hover:bg-slate-50 hover:border-slate-300 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmModal.onConfirm}
+                className="px-4 py-2.5 rounded-2xl bg-primary text-white text-[11px] font-bold tracking-wider hover:bg-slate-800 transition-all shadow-lg"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

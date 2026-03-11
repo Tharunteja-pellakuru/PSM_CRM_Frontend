@@ -55,11 +55,11 @@ const EnquiryList = ({
     if (isModelDropdownOpen && aiModelRef.current) {
       const rect = aiModelRef.current.getBoundingClientRect();
       setModelDropdownStyle({
-        position: 'fixed',
+        position: "fixed",
         top: `${rect.bottom + 8}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
-        zIndex: 9999
+        zIndex: 9999,
       });
     }
   }, [isModelDropdownOpen]);
@@ -67,7 +67,11 @@ const EnquiryList = ({
   useEffect(() => {
     const handleScrollResize = (e) => {
       if (isModelDropdownOpen) {
-        if (e.type === 'scroll' && e.target.closest && e.target.closest('.ai-model-dropdown')) {
+        if (
+          e.type === "scroll" &&
+          e.target.closest &&
+          e.target.closest(".ai-model-dropdown")
+        ) {
           return;
         }
         setIsModelDropdownOpen(false);
@@ -88,6 +92,8 @@ const EnquiryList = ({
   const [aiAnalysisError, setAiAnalysisError] = useState(null);
   const [aiAnalysisEnabled, setAiAnalysisEnabled] = useState(false);
   const [hideIrrelevant, setHideIrrelevant] = useState(false);
+  // store the *database record id* here; provider-specific modelId is
+  // available as `model.modelId` on the objects in `aiModels`.
   const [selectedAiModel, setSelectedAiModel] = useState("");
   const [leadModalOpen, setLeadModalOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -118,7 +124,8 @@ const EnquiryList = ({
   useEffect(() => {
     if (aiModels.length > 0 && !selectedAiModel) {
       const def = aiModels.find((m) => m.isDefault) || aiModels[0];
-      setSelectedAiModel(def.modelId);
+      // select the database id on startup
+      setSelectedAiModel(def.id);
     }
   }, [aiModels]);
 
@@ -128,6 +135,21 @@ const EnquiryList = ({
   }, [hideIrrelevant]);
 
   const analysisLoopRef = React.useRef(false);
+
+  // whenever the selected model changes, clear any existing analysis so
+  // that the new model will be used instead. this also resets the error
+  // state and allows the main effect below to kick off again.
+  useEffect(() => {
+    if (aiAnalysisEnabled) {
+      setAiAnalysisError(null);
+      analysisLoopRef.current = false;
+      enquiries.forEach((e) => {
+        if (e.aiAnalysis) {
+          onUpdate({ id: e.id, aiAnalysis: null });
+        }
+      });
+    }
+  }, [selectedAiModel]);
 
   useEffect(() => {
     if (aiAnalysisEnabled && activeTab === "new" && !analysisLoopRef.current) {
@@ -139,21 +161,24 @@ const EnquiryList = ({
           analysisLoopRef.current = true;
           setIsAnalyzing(true);
           setAiAnalysisError(null);
+          // look up using the record id stored in state
           const modelObj =
-            aiModels.find((m) => m.modelId === selectedAiModel) ||
+            aiModels.find((m) => m.id === selectedAiModel) ||
             aiModels.find((m) => m.isDefault) ||
             aiModels[0];
           const apiKey = modelObj?.apiKey || process.env.API_KEY;
-          const modelId = modelObj?.modelId || "gemini-2.0-flash";
+          // provider model identifier that backend expects when doing
+          // lookups internally (we now also support fallback lookup).
+          const providerModelId = modelObj?.modelId || "gemini-2.0-flash";
 
-          const batchSize = 5;
+          const batchSize = 10; // increased per request chunk size
           for (let i = 0; i < toAnalyze.length; i += batchSize) {
             const batch = toAnalyze.slice(i, i + batchSize);
             try {
               const results = await batchAnalyzeEnquiries(
                 batch,
                 apiKey,
-                modelId,
+                providerModelId,
               );
               results.forEach((res) => {
                 const enq = batch.find((b) => b.id === res.id);
@@ -464,7 +489,10 @@ const EnquiryList = ({
 
                 {/* AI Model Settings */}
                 {aiAnalysisEnabled && aiModels.length > 0 && (
-                  <div className="relative min-w-[160px] flex-1 shrink-0 z-50" ref={aiModelRef}>
+                  <div
+                    className="relative min-w-[160px] flex-1 shrink-0 z-50"
+                    ref={aiModelRef}
+                  >
                     <button
                       onClick={() =>
                         setIsModelDropdownOpen(!isModelDropdownOpen)
@@ -472,47 +500,48 @@ const EnquiryList = ({
                       className="w-full h-[38px] flex items-center justify-between gap-3 px-3 bg-white border border-slate-200 rounded-xl text-[10px] font-bold tracking-widest text-[#18254D] hover:bg-slate-50 transition-all shadow-sm active:scale-95 group"
                     >
                       <span className="truncate text-[10px] uppercase tracking-tight">
-                        {aiModels.find((m) => m.modelId === selectedAiModel)
-                          ?.name || "AI Model"}
+                        {aiModels.find((m) => m.id === selectedAiModel)?.name ||
+                          "AI Model"}
                       </span>
                       <ChevronDown
                         size={14}
                         className={`transition-transform duration-300 ${isModelDropdownOpen ? "rotate-180" : ""}`}
                       />
                     </button>
-                    {isModelDropdownOpen && createPortal(
-                      <>
-                        <div
-                          className="fixed inset-0 z-[9998]"
-                          onClick={() => setIsModelDropdownOpen(false)}
-                        />
-                        <div 
-                          className="ai-model-dropdown bg-white border border-slate-200 rounded-xl shadow-xl z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-                          style={modelDropdownStyle}
-                        >
-                          <div className="max-h-60 overflow-y-auto py-1 no-scrollbar">
-                            {aiModels.map((model) => (
-                              <button
-                                key={model.modelId}
-                                onClick={() => {
-                                  setSelectedAiModel(model.modelId);
-                                  setIsModelDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-colors flex flex-col gap-0.5 ${selectedAiModel === model.modelId ? "bg-slate-50" : ""}`}
-                              >
-                                <span className="text-[10px] font-bold text-primary">
-                                  {model.name}
-                                </span>
-                                <span className="text-[8px] text-slate-400 truncate">
-                                  {model.description}
-                                </span>
-                              </button>
-                            ))}
+                    {isModelDropdownOpen &&
+                      createPortal(
+                        <>
+                          <div
+                            className="fixed inset-0 z-[9998]"
+                            onClick={() => setIsModelDropdownOpen(false)}
+                          />
+                          <div
+                            className="ai-model-dropdown bg-white border border-slate-200 rounded-xl shadow-xl z-[9999] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                            style={modelDropdownStyle}
+                          >
+                            <div className="max-h-60 overflow-y-auto py-1 no-scrollbar">
+                              {aiModels.map((model) => (
+                                <button
+                                  key={model.modelId}
+                                  onClick={() => {
+                                    setSelectedAiModel(model.id);
+                                    setIsModelDropdownOpen(false);
+                                  }}
+                                  className={`w-full text-left px-4 py-2.5 hover:bg-slate-50 transition-colors flex flex-col gap-0.5 ${selectedAiModel === model.id ? "bg-slate-50" : ""}`}
+                                >
+                                  <span className="text-[10px] font-bold text-primary">
+                                    {model.name}
+                                  </span>
+                                  <span className="text-[8px] text-slate-400 truncate">
+                                    {model.description}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      </>,
-                      document.body
-                    )}
+                        </>,
+                        document.body,
+                      )}
                   </div>
                 )}
               </React.Fragment>

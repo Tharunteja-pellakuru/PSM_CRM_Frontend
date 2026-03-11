@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -25,6 +25,7 @@ import {
   MOCK_ACTIVITIES,
   MOCK_PROJECTS,
 } from "./constants/mockData";
+import { BASE_URL } from "./constants/config";
 
 // Wrappers to extract ID from URL params and pass to detail components
 const ClientDetailWrapper = ({
@@ -95,72 +96,100 @@ const AppRoutes = () => {
   const [projects, setProjects] = useState(MOCK_PROJECTS);
 
   // AI Models state (shared between Settings and EnquiryList)
-  const [aiModels, setAiModels] = useState([
-    {
-      id: "default-gpt4o-mini",
-      name: "GPT-4o Mini",
-      provider: "openai",
-      modelId: "gpt-4o-mini",
-      apiKey:
-        "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",
-      isDefault: false,
-    },
-    {
-      id: "default-gemini-flash",
-      name: "Gemini 2.0 Flash (Recommended)",
-      provider: "gemini",
-      modelId: "gemini-2.0-flash",
-      apiKey: "AIzaSyDhJO18qUjRCfeSfyOcB4L_SZU9zhSgv8E",
-      isDefault: false,
-    },
-    {
-      id: "gemini-1-5-flash",
-      name: "Gemini 1.5 Flash (Highest Quota)",
-      provider: "gemini",
-      modelId: "gemini-1.5-flash",
-      apiKey: "AIzaSyDhJO18qUjRCfeSfyOcB4L_SZU9zhSgv8E",
-      isDefault: false,
-    },
-    {
-      id: "gemini-3-flash",
-      name: "Gemini 3 Flash( Low Quota)",
-      provider: "gemini",
-      modelId: "gemini-3-flash-preview",
-      apiKey: "AIzaSyDhJO18qUjRCfeSfyOcB4L_SZU9zhSgv8E",
-      isDefault: false,
-    },
-    {
-      id: "claude-3-5-sonnet",
-      name: "Claude 3.5 Sonnet",
-      provider: "anthropic",
-      modelId: "claude-3-5-sonnet-20241022",
-      apiKey:
-        "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",
-      isDefault: false,
-    },
-    {
-      id: "groq-llama-3-70b",
-      name: "Llama 3(Groq)",
-      provider: "groq",
-      modelId: "llama-3.3-70b-versatile",
-      apiKey: "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",
-      isDefault: true,
-    },
-  ]);
+  const [aiModels, setAiModels] = useState([]);
+  const [loadingAiModels, setLoadingAiModels] = useState(true);
 
-  const handleAddAiModel = (model) => {
-    const newModel = { id: `ai-${Date.now()}`, ...model };
-    setAiModels([...aiModels, newModel]);
+  // Fetch AI models from API
+  useEffect(() => {
+    const fetchAiModels = async () => {
+      try {
+        console.log("Fetching AI models from:", `${BASE_URL}/api/ai-models`);
+        const response = await fetch(`${BASE_URL}/api/ai-models`);
+        console.log("AI models response status:", response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log("AI models fetched:", data);
+          // Transform to match frontend format
+          const transformed = data.map((model) => ({
+            id: model.id,
+            name: model.name,
+            provider: model.provider,
+            modelId: model.model_id,
+            isDefault: model.is_default,
+          }));
+          setAiModels(transformed);
+        } else {
+          console.error("Failed to fetch AI models:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching AI models:", error);
+      } finally {
+        setLoadingAiModels(false);
+      }
+    };
+
+    fetchAiModels();
+  }, []);
+
+  const handleAddAiModel = async (model) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/ai-models`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: model.name,
+          provider: model.provider,
+          modelId: model.modelId,
+          apiKey: model.apiKey,
+          isDefault: model.isDefault,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const newModel = { ...model, id: data.id };
+        setAiModels([...aiModels, newModel]);
+      }
+    } catch (error) {
+      console.error("Error adding AI model:", error);
+    }
   };
 
-  const handleUpdateAiModel = (updatedModel) => {
-    setAiModels(
-      aiModels.map((m) => (m.id === updatedModel.id ? updatedModel : m)),
-    );
+  const handleUpdateAiModel = async (updatedModel) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/ai-models/${updatedModel.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: updatedModel.name,
+          provider: updatedModel.provider,
+          modelId: updatedModel.modelId,
+          isDefault: updatedModel.isDefault,
+        }),
+      });
+
+      if (response.ok) {
+        setAiModels(
+          aiModels.map((m) => (m.id === updatedModel.id ? updatedModel : m)),
+        );
+      }
+    } catch (error) {
+      console.error("Error updating AI model:", error);
+    }
   };
 
-  const handleDeleteAiModel = (id) => {
-    setAiModels(aiModels.filter((m) => m.id !== id));
+  const handleDeleteAiModel = async (id) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/ai-models/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setAiModels(aiModels.filter((m) => m.id !== id));
+      }
+    } catch (error) {
+      console.error("Error deleting AI model:", error);
+    }
   };
 
   const handleClearNotifications = () => {
