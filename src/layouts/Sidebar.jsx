@@ -1,83 +1,28 @@
-import React, { useState, useEffect } from "react";
-import {
-  LayoutDashboard,
-  Users,
-  FolderKanban,
-  Settings,
-  Inbox,
-  UserPlus,
-  BellRing,
-  LogOut,
-  X,
-  ChevronDown,
-} from "lucide-react";
+import { useState } from "react";
+import { LayoutDashboard, Users, FolderKanban, Settings, Inbox, UserPlus, BellRing, LogOut, X, ChevronDown } from "lucide-react";
 import Logo from "../components/ui/Logo";
-import anandImg from "../assets/Anand.png";
 
-const Sidebar = ({
-  activeTab,
-  setActiveTab,
-  onLogout,
-  enquiryCount = 0,
-  followUpCount = 0,
-  clientFollowUpCount = 0,
-  leadFollowUpCount = 0,
-  isCollapsed = false,
-  onCloseMobile,
-}) => {
+function Sidebar({ activeTab, setActiveTab, onLogout, enquiryCount = 0, followUpCount = 0, clientFollowUpCount = 0, leadFollowUpCount = 0, onCloseMobile, isCollapsed = false }) {
   const [expandedItems, setExpandedItems] = useState(["followups"]);
 
-  useEffect(() => {
-    const isFollowUpRelated =
-      activeTab === "followups" || activeTab.startsWith("followups-");
-
-    if (!isFollowUpRelated) {
-      setExpandedItems((prev) => prev.filter((id) => id !== "followups"));
-    }
-  }, [activeTab]);
-
   const menuItems = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: <LayoutDashboard size={20} />,
-    },
-    {
-      id: "enquiries",
-      label: "Enquiries",
-      icon: <Inbox size={20} />,
-      badge: enquiryCount,
-    },
-    {
-      id: "followups",
-      label: "Follow-ups",
-      icon: <BellRing size={20} />,
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "enquiries", label: "Enquiries", icon: Inbox, badge: enquiryCount },
+    { 
+      id: "followups", 
+      label: "Follow-ups", 
+      icon: BellRing, 
       badge: followUpCount,
       subItems: [
-        {
-          id: "followups-clients",
-          label: "Reference Follow-ups",
-          icon: <Users size={16} />,
-          badge: clientFollowUpCount,
-        },
-        {
-          id: "followups-leads",
-          label: "New Follow-ups",
-          icon: <UserPlus size={16} />,
-          badge: leadFollowUpCount,
-        },
+        { id: "followups-clients", label: "Reference Follow-ups", icon: Users, badge: clientFollowUpCount },
+        { id: "followups-leads", label: "New Follow-ups", icon: UserPlus, badge: leadFollowUpCount },
       ],
     },
-    { id: "leads", label: "Leads", icon: <UserPlus size={20} /> },
-    { id: "clients", label: "Clients", icon: <Users size={20} /> },
-    { id: "projects", label: "Projects", icon: <FolderKanban size={20} /> },
-    { id: "settings", label: "Settings", icon: <Settings size={20} /> },
-    {
-      id: "logout",
-      label: "Log Out",
-      icon: <LogOut size={20} />,
-      isLogout: true,
-    },
+    { id: "leads", label: "Leads", icon: UserPlus },
+    { id: "clients", label: "Clients", icon: Users },
+    { id: "projects", label: "Projects", icon: FolderKanban },
+    { id: "settings", label: "Settings", icon: Settings },
+    { id: "logout", label: "Log Out", icon: LogOut, isLogout: true },
   ];
 
   return (
@@ -145,7 +90,7 @@ const Sidebar = ({
               >
                 <div className="flex items-center gap-3">
                   <span className={isActive ? "text-white" : "text-slate-500"}>
-                    {item.icon}
+                    <item.icon size={20} />
                   </span>
                   {!isCollapsed && (
                     <span className="text-sidebar-nav font-medium tracking-wide">
@@ -193,10 +138,8 @@ const Sidebar = ({
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${isSubActive ? "bg-black/20 text-white shadow-sm" : "text-slate-300 hover:text-white hover:bg-white/5"}`}
                       >
-                        <span
-                          className={isSubActive ? "text-white" : "text-white"}
-                        >
-                          {sub.icon}
+                        <span className="text-white">
+                          <sub.icon size={16} />
                         </span>
                         <div className="flex-1 flex items-center justify-between gap-2.5">
                           <span>{sub.label}</span>

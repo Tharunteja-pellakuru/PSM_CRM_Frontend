@@ -32,6 +32,7 @@ import DatePicker from "../../components/ui/DatePicker";
 
 const LeadList = ({
   leads,
+  loading = false,
   onSelectLead,
   onAddLead,
   onDeleteLead,
@@ -189,10 +190,13 @@ const LeadList = ({
     }
   };
 
-  const filteredLeads = leads.filter((lead) => {
+  const filteredLeads = (leads || []).filter((lead) => {
+    // Skip invalid leads
+    if (!lead || typeof lead !== 'object') return false;
+    
     const matchesSearch =
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company.toLowerCase().includes(searchTerm.toLowerCase());
+      (lead.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (lead.company || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     let matchesStatus = filterStatus === "All" || lead.status === filterStatus;
     let matchesLeadType = true;
@@ -201,10 +205,14 @@ const LeadList = ({
     if (title === "Leads") {
       // Sub-filter by Lead View (Pending, Converted, Dismissed)
       if (leadView === "Pending") {
-        if (lead.status !== "Lead" || lead.isConverted) return false;
+        // Show leads that are not converted and not dismissed
+        // Hot, Warm, Cold statuses should appear here
+        if (lead.isConverted || lead.status === "Dismissed") return false;
       } else if (leadView === "Converted") {
+        // Show only converted leads
         if (!lead.isConverted || lead.status === "Dismissed") return false;
       } else if (leadView === "Dismissed") {
+        // Show only dismissed leads - strict check
         if (lead.status !== "Dismissed") return false;
       }
 
@@ -234,7 +242,39 @@ const LeadList = ({
   });
 
   const getStatusBadge = (lead) => {
-    if ((lead.status === "Lead" || lead.isConverted) && lead.leadType) {
+    // For leads with status "Lead", show their leadType (Hot/Warm/Cold)
+    if (lead.status === "Lead" && lead.leadType) {
+      switch (lead.leadType) {
+        case "Hot":
+          return {
+            label: "Hot",
+            className: "bg-error/10 text-error border-error/20",
+            icon: <Flame size={12} strokeWidth={3} />,
+          };
+        case "Warm":
+          return {
+            label: "Warm",
+            className: "bg-warning/10 text-warning border-warning/20",
+            icon: <Sun size={12} strokeWidth={3} />,
+          };
+        case "Cold":
+          return {
+            label: "Cold",
+            className: "bg-info/10 text-info border-info/20",
+            icon: <Snowflake size={12} strokeWidth={3} />,
+          };
+        default:
+          // Fallback if leadType exists but doesn't match
+          return {
+            label: lead.leadType,
+            className: "bg-primary/10 text-primary border-primary/20",
+            icon: null,
+          };
+      }
+    }
+    
+    // For converted leads
+    if (lead.isConverted && lead.leadType) {
       switch (lead.leadType) {
         case "Hot":
           return {
@@ -256,13 +296,14 @@ const LeadList = ({
           };
         default:
           return {
-            label: "Lead",
-            className: "bg-primary/10 text-primary border-primary/20",
+            label: lead.leadType || "Converted",
+            className: "bg-success/10 text-success border-success/20",
             icon: null,
           };
       }
     }
 
+    // For other statuses (Active, Pending, Churned, Inactive, Dismissed)
     switch (lead.status) {
       case "Lead":
         return {
@@ -336,6 +377,18 @@ const LeadList = ({
       });
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500">Loading leads...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full relative">
@@ -675,18 +728,17 @@ const LeadList = ({
                               <UserCheck size={18} />
                             </button>
                           )}
-                          {onDeleteLead &&
-                            (title !== "Leads" || leadView === "Dismissed") && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteLead(lead.id);
-                                }}
-                                className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-300 hover:text-error hover:border-error hover:bg-error/5 transition-all active:scale-90 shadow-sm"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            )}
+                          {onDeleteLead && lead.status === "Dismissed" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteLead(lead.id);
+                              }}
+                              className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-300 hover:text-error hover:border-error hover:bg-error/5 transition-all active:scale-90 shadow-sm"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                           {onDismissLead &&
                             (lead.status === "Lead" || lead.isConverted) &&
                             lead.status !== "Dismissed" && (
@@ -862,18 +914,17 @@ const LeadList = ({
                         <UserCheck size={16} />
                       </button>
                     )}
-                    {onDeleteLead &&
-                      (title !== "Leads" || leadView === "Dismissed") && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteLead(lead.id);
-                          }}
-                          className="p-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all active:scale-90"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                    {onDeleteLead && lead.status === "Dismissed" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteLead(lead.id);
+                        }}
+                        className="p-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all active:scale-90"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                     {onDismissLead &&
                       (lead.status === "Lead" || lead.isConverted) &&
                       lead.status !== "Dismissed" && (

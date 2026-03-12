@@ -1,84 +1,38 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  AreaChart,
-  Area,
-  Line,
-  ComposedChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  Users,
-  Briefcase,
-  Inbox,
-  CheckCircle2,
-  Clock,
-  User,
-  Activity,
-  UserPlus,
-  Bell,
-  ChevronRight,
-  ListChecks,
-  X,
-  ChevronDown,
-  Info,
-} from "lucide-react";
-import { ANALYTICS_DATA, QUARTERLY_ANALYTICS_DATA } from "../../constants/mockData";
+import { useState, useEffect, useRef } from "react";
+import { Area, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Inbox, CheckCircle2, Clock, Activity, UserPlus, Bell, ChevronRight, ChevronDown, X, Info } from "lucide-react";
+import { ANALYTICS_DATA } from "../../constants/mockData";
 
-const StatCard = ({ title, value, trend, trendUp, icon, description }) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 transition-all hover:-translate-y-1 hover:shadow-md group flex flex-col justify-between overflow-hidden relative">
-    <div>
-      <div className="flex justify-between items-start mb-4 relative z-10">
-        <div className="p-2.5 bg-primary/5 text-primary rounded-xl group-hover:bg-primary group-hover:text-white transition-all duration-300 shrink-0">
-          {React.cloneElement(icon, { size: 20 })}
+// Simple stat card component
+function StatCard({ title, value, trend, trendUp, icon, description }) {
+  return (
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:-translate-y-1 hover:shadow-md transition-all relative">
+      <div className="flex justify-between items-start mb-4">
+        <div className="p-2.5 bg-primary/5 text-primary rounded-xl">
+          {icon}
         </div>
-        <div className="flex items-center gap-2">
-          {trend && (
-            <span
-              className={`flex items-center text-[10px] font-bold  tracking-tight px-2 py-0.5 rounded-full whitespace-nowrap ${trendUp ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}
-            >
-              {trend}
-            </span>
-          )}
+        {trend && (
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${trendUp ? "bg-success/10 text-success" : "bg-error/10 text-error"}`}>
+            {trend}
+          </span>
+        )}
+      </div>
+      <h3 className="text-textMuted text-[11px] font-semibold tracking-wider">{title}</h3>
+      <p className="text-2xl sm:text-3xl font-bold text-primary mt-1.5">{value}</p>
+      
+      {description && (
+        <div className="absolute bottom-4 right-4 group/info">
+          <Info size={14} className="text-slate-300 hover:text-primary cursor-help" />
+          <div className="absolute bottom-full right-0 mb-2 w-48 p-2.5 bg-[#18254D] text-white text-[10px] rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all">
+            {description}
+          </div>
         </div>
-      </div>
-      <h3 className="text-textMuted text-[11px] font-semibold  tracking-wider relative z-10 truncate">
-        {title}
-      </h3>
-      <div className="flex items-baseline gap-2 mt-1.5 relative z-10">
-        <p className="text-2xl sm:text-3xl font-bold text-primary tracking-tighter">
-          {value}
-        </p>
-      </div>
+      )}
     </div>
-    {/* Info Icon in Bottom Right Corner */}
-    {description && (
-      <div className="absolute bottom-4 right-4 z-20 group/info">
-        <Info
-          size={14}
-          className="text-slate-300 hover:text-primary transition-colors cursor-help"
-        />
-        <div className="absolute bottom-full right-0 mb-2 w-48 p-2.5 bg-[#18254D] text-white text-[10px] font-medium rounded-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 shadow-xl z-[100] backdrop-blur-md border border-white/10 pointer-events-none">
-          <div className="relative z-10">{description}</div>
-          <div className="absolute top-full right-2 border-8 border-transparent border-t-[#18254D]"></div>
-        </div>
-      </div>
-    )}
-  </div>
-);
+  );
+}
 
-const Dashboard = ({
-  followUps,
-  clients,
-  enquiries,
-  onSelectFollowUp,
-  onViewAllFollowUps,
-  onNavigate,
-  onClearNotifications,
-}) => {
+function Dashboard({ followUps, clients, enquiries, onSelectFollowUp, onNavigate, onClearNotifications }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedYear, setSelectedYear] = useState("2024");
   const [selectedMonth, setSelectedMonth] = useState("All");
@@ -89,120 +43,60 @@ const Dashboard = ({
   const [currentUser, setCurrentUser] = useState(null);
   const dropdownRef = useRef(null);
 
-  // Load current user from localStorage
+  // Load user from localStorage
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
-    if (user) {
-      setCurrentUser(user);
-    }
+    if (user) setCurrentUser(user);
   }, []);
 
-  const isToday = (date) => {
+  // Helper functions
+  function isToday(date) {
     const d = new Date(date);
     const today = new Date();
-    return (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    );
-  };
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  }
 
-  const isMissed = (date) => {
+  function isMissed(date) {
     const d = new Date(date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return d < today;
-  };
+  }
 
+  // Calculate stats
   const newEnquiries = enquiries.filter((e) => e.status === "new");
-  const todayTasks = followUps.filter(
-    (f) => isToday(f.dueDate) && f.status === "pending",
-  );
-  const missedTasks = followUps.filter(
-    (f) => isMissed(f.dueDate) && f.status === "pending",
-  );
+  const todayTasks = followUps.filter((f) => isToday(f.dueDate) && f.status === "pending");
+  const missedTasks = followUps.filter((f) => isMissed(f.dueDate) && f.status === "pending");
   const totalNotifications = newEnquiries.length;
-
   const newEnquiriesCount = newEnquiries.length;
+  
   const leadCount = clients.filter((c) => c.status === "Lead").length;
   const clientCount = clients.filter((c) => c.status === "Active").length;
-
   const totalPool = leadCount + clientCount;
-  const engagementRate =
-    totalPool > 0 ? Math.round((clientCount / totalPool) * 100) : 0;
+  const engagementRate = totalPool > 0 ? Math.round((clientCount / totalPool) * 100) : 0;
 
-  const getFilteredChartData = () => {
-    // Basic multiplication factors for simulated year data
-    const yearFactors = {
-      2023: 0.7,
-      2024: 1.0,
-      2025: 1.3,
-      2026: 1.6,
-    };
-    const factor = yearFactors[selectedYear] || 1.0;
-
+  // Chart data
+  function getChartData() {
+    const factor = { 2023: 0.7, 2024: 1.0, 2025: 1.3, 2026: 1.6 }[selectedYear] || 1.0;
+    
     if (selectedMonth === "All") {
-      // Return 6 months of data with year factor applied
       return ANALYTICS_DATA.map((item) => ({
         ...item,
         enquiries: Math.round(item.enquiries * factor),
         clients: Math.round(item.clients * factor),
         projects: Math.round(item.projects * factor),
-        // Engagement stays similar but with slight jitter
-        engagement: Math.min(
-          95,
-          Math.max(
-            40,
-            Math.round(item.engagement * (0.9 + Math.random() * 0.2)),
-          ),
-        ),
       }));
-    } else {
-      // Generate 4 weeks for the specific month
-      return [
-        {
-          name: "Week 1",
-          enquiries: Math.round(5 * factor),
-          clients: Math.round(2 * factor),
-          projects: 1,
-          engagement: 60,
-        },
-        {
-          name: "Week 2",
-          enquiries: Math.round(8 * factor),
-          clients: Math.round(4 * factor),
-          projects: 2,
-          engagement: 65,
-        },
-        {
-          name: "Week 3",
-          enquiries: Math.round(6 * factor),
-          clients: Math.round(3 * factor),
-          projects: 1,
-          engagement: 62,
-        },
-        {
-          name: "Week 4",
-          enquiries: Math.round(10 * factor),
-          clients: Math.round(6 * factor),
-          projects: 3,
-          engagement: 75,
-        },
-      ];
     }
-  };
+    
+    return [
+      { name: "Week 1", enquiries: Math.round(5 * factor), clients: Math.round(2 * factor), projects: 1, engagement: 60 },
+      { name: "Week 2", enquiries: Math.round(8 * factor), clients: Math.round(4 * factor), projects: 2, engagement: 65 },
+      { name: "Week 3", enquiries: Math.round(6 * factor), clients: Math.round(3 * factor), projects: 1, engagement: 62 },
+      { name: "Week 4", enquiries: Math.round(10 * factor), clients: Math.round(6 * factor), projects: 3, engagement: 75 },
+    ];
+  }
 
-  const chartData = getFilteredChartData();
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const chartData = getChartData();
 
   return (
     <div className="w-full relative">

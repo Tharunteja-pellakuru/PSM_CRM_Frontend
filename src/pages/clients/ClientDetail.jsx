@@ -41,17 +41,33 @@ const ClientDetail = ({
   const [nextAction, setNextAction] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: client.name,
-    email: client.email,
-    phone: client.phone,
-    leadType: client.leadType || "Warm",
-    notes: client.notes,
-    website: client.website || "",
+    name: "",
+    email: "",
+    phone: "",
+    leadType: "Warm",
+    notes: "",
+    website: "",
+    projectCategory: "Tech",
   });
 
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  // Update form data when modal opens or client changes
+  useEffect(() => {
+    if (showEditModal && client) {
+      setEditFormData({
+        name: client.name || "",
+        email: client.email || "",
+        phone: client.phone || "",
+        leadType: client.leadType || "Warm",
+        notes: client.notes || "",
+        website: client.website || "",
+        projectCategory: client.projectCategory || client.industry || "Tech",
+      });
+    }
+  }, [showEditModal, client]);
 
   const [isLogging, setIsLogging] = useState(false);
   const [logData, setLogData] = useState({
@@ -125,14 +141,6 @@ const ClientDetail = ({
             {client.status === "Lead" && (
               <button
                 onClick={() => {
-                  setEditFormData({
-                    name: client.name,
-                    email: client.email,
-                    phone: client.phone,
-                    leadType: client.leadType || "Warm",
-                    notes: client.notes,
-                    website: client.website || "",
-                  });
                   setShowEditModal(true);
                 }}
                 className="flex-shrink-0 p-3.5 bg-slate-50 text-primary border border-slate-200 rounded-xl hover:bg-white hover:border-primary transition-all shadow-sm"
@@ -176,19 +184,33 @@ const ClientDetail = ({
                 </div>
 
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
                     if (onUpdateClient) {
-                      onUpdateClient({
-                        ...client,
-                        name: editFormData.name,
-                        email: editFormData.email,
-                        phone: editFormData.phone,
-                        leadType: editFormData.leadType,
-                        notes: editFormData.notes,
-                        website: editFormData.website,
-                      });
-                      setShowEditModal(false);
+                      try {
+                        // Ensure we have the latest values
+                        const formDataToSubmit = {
+                          name: editFormData.name,
+                          email: editFormData.email,
+                          phone: editFormData.phone,
+                          leadType: editFormData.leadType,
+                          notes: editFormData.notes,
+                          website: editFormData.website,
+                          projectCategory: editFormData.projectCategory,
+                        };
+                        console.log("=== FORM SUBMISSION DEBUG ===");
+                        console.log("Submitting edit form with data:", formDataToSubmit);
+                        console.log("Website value being sent:", formDataToSubmit.website);
+                        
+                        await onUpdateClient(client.id, formDataToSubmit);
+                        
+                        console.log("Lead updated successfully!");
+                        console.log("=== END DEBUG ===");
+                        setShowEditModal(false);
+                      } catch (error) {
+                        console.error("Failed to update lead:", error);
+                        alert("Failed to update lead. Please try again.");
+                      }
                     }
                   }}
                   className="p-5 space-y-4"
@@ -265,6 +287,35 @@ const ClientDetail = ({
                         })
                       }
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-primary  tracking-widest ml-1">
+                      Lead Category
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {["Tech", "Social Media"].map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() =>
+                            setEditFormData({
+                              ...editFormData,
+                              projectCategory: cat,
+                            })
+                          }
+                          className={`py-3 px-4 rounded-xl border-2 text-[10px] font-bold tracking-widest transition-all ${
+                            editFormData.projectCategory === cat
+                              ? cat === "Tech"
+                                ? "bg-secondary/10 border-secondary text-secondary shadow-md"
+                                : "bg-blue-500/10 border-blue-500 text-blue-500 shadow-md"
+                              : "bg-white border-slate-100 text-slate-400 hover:border-slate-300"
+                          }`}
+                        >
+                          {cat.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -497,7 +548,7 @@ const ClientDetail = ({
             <div className="space-y-8">
               <div>
                 <h3 className="text-[9px] font-bold text-primary  tracking-widest mb-4 opacity-40">
-                  Contact Dossier
+                  Contact Details
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-4 p-3.5 bg-white rounded-xl border border-slate-100 shadow-sm group hover:border-secondary">
@@ -519,7 +570,7 @@ const ClientDetail = ({
               </div>
               <div>
                 <h3 className="text-[9px] font-bold text-primary  tracking-widest mb-4 opacity-40">
-                  Discovery
+                  Brief Message
                 </h3>
                 <div className="p-5 bg-white border border-slate-100 rounded-xl shadow-inner italic text-xs md:text-sm text-primary leading-relaxed font-medium">
                   {client.notes}
@@ -657,7 +708,7 @@ const ClientDetail = ({
                 <div className="space-y-6 animate-fade-in">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-bold text-primary tracking-tight">
-                      Project Conversations
+                      Lead Conversations
                     </h3>
                     <button
                       onClick={() => setIsLogging(true)}

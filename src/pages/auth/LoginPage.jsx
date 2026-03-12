@@ -1,16 +1,8 @@
-import React, { useState, useMemo } from "react";
-import {
-  Mail,
-  Lock,
-  ArrowRight,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Leaf,
-} from "lucide-react";
+import { useState } from "react";
+import { Mail, Lock, ArrowRight, AlertCircle, Eye, EyeOff, Leaf } from "lucide-react";
 import logoImg from "../../assets/Parivartan_Logo.png";
 
-const LoginPage = ({ onLogin }) => {
+function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("chaitanya@parivartan.crm");
   const [password, setPassword] = useState("Password@123");
   const [showPassword, setShowPassword] = useState(false);
@@ -18,19 +10,11 @@ const LoginPage = ({ onLogin }) => {
   const [error, setError] = useState(null);
   const [imgError, setImgError] = useState(false);
 
-  const isEmailValid = useMemo(() => {
-    const emailRegex =
-      /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-    return emailRegex.test(email);
-  }, [email]);
+  // Simple validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isFormValid = emailRegex.test(email) && password.length >= 6;
 
-  const isPasswordValid = useMemo(() => {
-    return password.length >= 6;
-  }, [password]);
-
-  const isFormValid = isEmailValid && isPasswordValid;
-
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!isFormValid) return;
 
@@ -38,32 +22,24 @@ const LoginPage = ({ onLogin }) => {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:5000/api/login", {
+      const res = await fetch("http://localhost:5000/api/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
+      const data = await res.json();
 
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log("Login success:", data);
+      if (res.ok) {
         onLogin(data);
       } else {
         setError(data.message || "Invalid Email or Password");
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       setError("Server error. Please try again.");
     }
 
     setIsLoading(false);
-  };
+  }
 
   return (
     <div className="w-full h-screen flex flex-col items-center justify-center p-4 bg-slate-50 relative overflow-hidden">

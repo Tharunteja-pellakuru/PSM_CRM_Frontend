@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM | Parivartan</title>
+  <link rel="icon" type="image/png" href="./src/assets/fav-icon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+          },
+          colors: {
+            primary: "#18254D",
+            secondary: "#475569",
+            background: "#F6F9F4",
+            surface: "#FFFFFF",
+            textPrimary: "#1C1C1C",
+            textMuted: "#64748B",
+            success: "#22C55E",
+            warning: "#F59E0B",
+            error: "#EF4444",
+            info: "#3B82F6",
+          },
+          fontSize: {
+            xs: ["0.75rem", { lineHeight: "1rem" }],
+            sm: ["0.875rem", { lineHeight: "1.25rem" }],
+            base: ["1rem", { lineHeight: "1.5rem" }],
+            lg: ["1.125rem", { lineHeight: "1.75rem" }],
+            xl: ["1.25rem", { lineHeight: "1.75rem" }],
+            "2xl": ["1.5rem", { lineHeight: "2rem" }],
+            "3xl": ["1.875rem", { lineHeight: "2.25rem" }],
+            "content-base": [
+              "0.9375rem",
+              { lineHeight: "1.6", letterSpacing: "-0.01em" },
+            ],
+            "content-sm": ["0.8125rem", { lineHeight: "1.5" }],
+            "content-lg": [
+              "1.0625rem",
+              { lineHeight: "1.6", letterSpacing: "-0.015em" },
+            ],
+            "sidebar-nav": [
+              "0.75rem",
+              { lineHeight: "1.4", fontWeight: "500" },
+            ],
+            "sidebar-badge": ["0.625rem", { lineHeight: "1" }],
+          },
+          fontWeight: {
+            normal: "400",
+            medium: "500",
+            semibold: "600",
+            bold: "700",
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    /* ── Typography tokens ──────────────────────── */
+
+    :root {
+      /* Typography System */
+      --font-family-base: "Inter", system-ui, sans-serif;
+
+      --font-size-sidebar-label: 0.75rem;
+      /* 12px */
+      --font-size-sidebar-badge: 0.625rem;
+      /* 10px */
+      --font-size-sidebar-header: 0.875rem;
+      /* 14px */
+      --font-size-base: 0.9375rem;
+      /* 15px - Slightly larger for readability */
+      --font-size-sm: 0.8125rem;
+      /* 13px */
+      --font-size-lg: 1.0625rem;
+      /* 17px */
+      --font-size-heading: 1.5rem;
+      /* 24px */
+
+      --line-height-base: 1.6;
+      --line-height-tight: 1.35;
+      --line-height-heading: 1.25;
+
+      --letter-spacing-tight: -0.01em;
+      --letter-spacing-tighter: -0.02em;
+
+      /* Spacing System */
+      --space-1: 0.25rem;
+      /* 4px */
+      --space-2: 0.5rem;
+      /* 8px */
+      --space-3: 0.75rem;
+      /* 12px */
+      --space-4: 1rem;
+      /* 16px */
+      --space-5: 1.25rem;
+      /* 20px */
+      --space-6: 1.5rem;
+      /* 24px */
+      --space-8: 2rem;
+      /* 32px */
+      --space-12: 3rem;
+      /* 48px */
+
+      /* Component Tokens */
+      --radius-sm: 0.5rem;
+      /* 8px */
+      --radius-md: 0.75rem;
+      /* 12px */
+      --radius-lg: 1rem;
+      /* 16px */
+      --radius-xl: 1.5rem;
+      /* 24px */
+      --icon-size-base: 1.125rem;
+      /* 18px */
+    }
+
+    body {
+      font-family: var(--font-family-base);
+      background-color: #f6f9f4;
+      color: #1c1c1c;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* ── Main content typography ────────────────── */
+    main {
+      font-size: var(--font-size-base);
+      line-height: var(--line-height-base);
+      letter-spacing: -0.005em;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      letter-spacing: var(--letter-spacing-tight);
+      line-height: var(--line-height-heading);
+    }
+
+    /* ── Sidebar typography ─────────────────────── */
+    aside {
+      font-size: var(--font-size-sidebar-label);
+      line-height: var(--line-height-tight);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Responsive adjustments ─────────────────── */
+    @media (max-width: 768px) {
+      :root {
+        --font-size-base: 0.8125rem;
+        /* 13px */
+        --font-size-heading: 1.25rem;
+        /* 20px */
+        /* Tighten spacing on mobile */
+        --space-4: 0.75rem;
+        --space-5: 1rem;
+        --space-6: 1.25rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      :root {
+        --font-size-base: 0.75rem;
+        /* 12px */
+        --font-size-heading: 1.125rem;
+        /* 18px */
+      }
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .animate-pop {
+      animation: pop 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-slide-right {
+      animation: slideRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .animate-slide-left {
+      animation: slideLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes slideRight {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideLeft {
+      from {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      @keyframes pop {
+        from {
+          opacity: 0;
+          transform: translateY(10px) scale(0.95);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+    }
+  </style>
+
+  <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@^19.2.4",
+          "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+          "react/": "https://esm.sh/react@^19.2.4/",
+          "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+          "lucide-react": "https://esm.sh/lucide-react@^0.564.0",
+          "recharts": "https://esm.sh/recharts@^3.7.0"
+        }
+      }
+    </script>
+  <script type="module" crossorigin src="/assets/index-KGM9-de_.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-B9O5vR4e.css">
+</head>
+
+<body class="antialiased text-textPrimary">
+  <div id="root"></div>
+</body>
+
+</html>
