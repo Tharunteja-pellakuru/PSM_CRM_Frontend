@@ -1167,7 +1167,7 @@ const Settings = ({
                                     <h5 className="font-bold text-slate-900 truncate">
                                       {model.name}
                                     </h5>
-                                    {model.isDefault && (
+                                    {!!model.isDefault && (
                                       <span className="text-[8px] px-2 py-0.5 bg-primary text-white rounded-full font-bold tracking-widest uppercase">
                                         Default
                                       </span>
