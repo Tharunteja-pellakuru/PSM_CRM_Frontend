@@ -157,7 +157,7 @@ const ClientDetail = ({
                 <div className="flex items-center gap-2.5 text-[11px] text-textMuted font-bold  tracking-widest truncate">
                   <span className="truncate">
                     {isLead
-                      ? client.company || "Independent"
+                      ? client.company || ""
                       : client.projectName ||
                       client.company ||
                       "Global Project"}
@@ -382,7 +382,7 @@ const ClientDetail = ({
                       onChange={(e) =>
                         setEditFormData({
                           ...editFormData,
-                          phone: e.target.value,
+                          phone: e.target.value.replace(/\D/g, ""),
                         })
                       }
                     />
@@ -390,7 +390,7 @@ const ClientDetail = ({
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-primary  tracking-widest ml-1">
-                      Website Url
+                      Website Url (Optional)
                     </label>
                     <input
                       type="text"

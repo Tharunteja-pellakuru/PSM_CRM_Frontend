@@ -141,7 +141,7 @@ function AppRoutes() {
         const transformedLeads = leadsArray.map((lead) => ({
           id: lead.id?.toString() || lead.uuid,
           name: lead.full_name || "Unknown",
-          company: lead.website_url?.replace(/^https?:\/\//, "").split("/")[0] || "Independent",
+          company: lead.website_url?.replace(/^https?:\/\//, "").split("/")[0] || "",
           email: lead.email || "",
           phone: lead.phone_number || "",
           status: lead.lead_status === "Dismissed" ? "Dismissed" : "Lead",
@@ -260,7 +260,7 @@ function AppRoutes() {
           email: data.email,
           lead_status: data.leadType || "Warm",
           message: data.notes || "",
-          website_url: data.website || data.company || "",
+          website_url: data.website || "",
           country: data.country || "",
           lead_category: data.projectCategory || data.industry || "Tech",
         };
@@ -276,7 +276,7 @@ function AppRoutes() {
           const newLead = {
             id: result.lead?.id?.toString() || result.lead?.uuid || `new-${Date.now()}`,
             name: result.lead?.full_name || data.name,
-            company: result.lead?.website_url?.replace(/^https?:\/\//, "").split("/")[0] || data.company || "Independent",
+            company: result.lead?.website_url ? result.lead.website_url.replace(/^https?:\/\//, "").split("/")[0] : "",
             email: result.lead?.email || data.email,
             phone: result.lead?.phone_number || data.phone,
             status: "Lead",
@@ -309,7 +309,7 @@ function AppRoutes() {
         joinedDate: data.onboardingDate || new Date().toISOString().split("T")[0],
         lastContact: new Date().toISOString().split("T")[0],
         industry: data.projectCategory || data.industry || "Unknown",
-        company: data.projectName || data.company || "Independent",
+        company: data.projectName || data.company || "",
         notes: `${data.notes || ""}\n\n[Project] ${data.projectName} | ${data.projectStatus}`,
       };
       
@@ -363,10 +363,11 @@ function AppRoutes() {
           ...leadToUpdate,
           id: result.lead?.id?.toString() || id,
           name: result.lead?.full_name || leadToUpdate.name,
+          company: result.lead?.website_url ? result.lead.website_url.replace(/^https?:\/\//, "").split("/")[0] : "",
           email: result.lead?.email || leadToUpdate.email,
           phone: result.lead?.phone_number || leadToUpdate.phone,
           status: "Dismissed",
-          leadType: result.lead?.lead_status || "Warm",  // Update from API
+          leadType: result.lead?.lead_status || "Warm",
           projectCategory: result.lead?.lead_category || leadToUpdate.projectCategory,
           website: result.lead?.website_url || leadToUpdate.website,
           notes: result.lead?.message || leadToUpdate.notes,
@@ -420,11 +421,24 @@ function AppRoutes() {
         const result = await res.json();
         console.log("Lead restored successfully:", result);
         
+        const restoredLead = {
+          ...leadToUpdate,
+          id: result.lead?.id?.toString() || id,
+          name: result.lead?.full_name || leadToUpdate.name,
+          company: result.lead?.website_url ? result.lead.website_url.replace(/^https?:\/\//, "").split("/")[0] : "",
+          email: result.lead?.email || leadToUpdate.email,
+          phone: result.lead?.phone_number || leadToUpdate.phone,
+          status: "Lead",
+          leadType: result.lead?.lead_status || "Warm",
+          projectCategory: result.lead?.lead_category || leadToUpdate.projectCategory,
+          website: result.lead?.website_url || leadToUpdate.website,
+          notes: result.lead?.message || leadToUpdate.notes,
+          isConverted: false
+        };
+
         // Update local state after successful API call
-        setLeads((prev) => prev.map((l) => (l.id == id ? { ...l, status: "Lead", leadType: "Warm", isConverted: false } : l)));
-        
-        // Also update clients array to keep them in sync
-        setClients((prev) => prev.map((c) => (c.id == id ? { ...c, status: "Lead", leadType: "Warm", isConverted: false } : c)));
+        setLeads((prev) => prev.map((l) => (l.id == id ? restoredLead : l)));
+        setClients((prev) => prev.map((c) => (c.id == id ? restoredLead : c)));
       } else {
         const errorData = await res.json();
         console.error("Failed to restore lead:", errorData);
@@ -438,83 +452,69 @@ function AppRoutes() {
 
   async function handleEditLead(id, editData) {
     try {
-      // Find the lead to get current data
+      // Find the lead to update
       const leadToUpdate = leads.find((l) => l.id == id);
-      if (!leadToUpdate) {
-        console.error("Lead not found:", id);
-        throw new Error("Lead not found");
-      }
+      if (!leadToUpdate) return;
 
-      console.log("=== EDIT LEAD DEBUG ===");
-      console.log("Lead ID:", id);
-      console.log("Editing lead - Received data:", editData);
-      console.log("Original lead data:", leadToUpdate);
-
-      // Map frontend data to backend schema - ensure all fields are sent
-      const updatePayload = {
-        id: id,
-        full_name: editData.name !== undefined && editData.name !== null ? editData.name : leadToUpdate.name,
-        phone_number: editData.phone !== undefined && editData.phone !== null ? editData.phone : leadToUpdate.phone,
+      // 1. Calculate the expected new state (Optimistic Update)
+      const websiteValue = editData.website !== undefined && editData.website !== null ? editData.website : (leadToUpdate.website || "");
+      const newCompany = websiteValue ? websiteValue.replace(/^https?:\/\//, "").split("/")[0] : "";
+      
+      const optimisticLead = {
+        ...leadToUpdate,
+        name: editData.name !== undefined && editData.name !== null ? editData.name : leadToUpdate.name,
+        company: newCompany,
         email: editData.email !== undefined && editData.email !== null ? editData.email : leadToUpdate.email,
-        lead_status: editData.leadType !== undefined && editData.leadType !== null ? editData.leadType : leadToUpdate.leadType,
-        website_url: editData.website !== undefined && editData.website !== null ? editData.website : (leadToUpdate.website || ""),
+        phone: editData.phone !== undefined && editData.phone !== null ? editData.phone : leadToUpdate.phone,
+        leadType: editData.leadType !== undefined && editData.leadType !== null ? editData.leadType : leadToUpdate.leadType,
+        projectCategory: editData.projectCategory !== undefined && editData.projectCategory !== null ? editData.projectCategory : (leadToUpdate.projectCategory || "Tech"),
+        website: websiteValue,
+        notes: editData.notes !== undefined && editData.notes !== null ? editData.notes : leadToUpdate.notes,
         country: editData.country !== undefined && editData.country !== null ? editData.country : (leadToUpdate.country || ""),
-        message: editData.notes !== undefined && editData.notes !== null ? editData.notes : leadToUpdate.notes,
-        lead_category: editData.projectCategory !== undefined && editData.projectCategory !== null ? editData.projectCategory : (leadToUpdate.projectCategory || "Tech"),
       };
 
-      console.log("Update payload being sent to API:", JSON.stringify(updatePayload, null, 2));
+      // 2. Update state immediately
+      setLeads((prev) => prev.map((l) => (l.id == id ? optimisticLead : l)));
+      setClients((prev) => prev.map((c) => (c.id == id ? optimisticLead : c)));
 
-      // Call API to update the lead - ID is in the URL path
+      // Call API to update the lead
       const res = await fetch(`${BASE_URL}/api/update-lead/${id}`, {
         method: "PUT",
         headers: getAuthHeaders(),
-        body: JSON.stringify(updatePayload),
+        body: JSON.stringify({
+          full_name: optimisticLead.name,
+          phone_number: optimisticLead.phone,
+          email: optimisticLead.email,
+          lead_status: optimisticLead.leadType,
+          website_url: optimisticLead.website,
+          country: optimisticLead.country,
+          message: optimisticLead.notes,
+          lead_category: optimisticLead.projectCategory,
+        }),
       });
 
-      console.log("API Response status:", res.status);
-
       if (!res.ok) {
+        // Rollback on failure
+        setLeads((prev) => prev.map((l) => (l.id == id ? leadToUpdate : l)));
+        setClients((prev) => prev.map((c) => (c.id == id ? leadToUpdate : c)));
         const errorData = await res.json();
-        console.error("API Error Response:", errorData);
         throw new Error(errorData.message || "Failed to update lead");
       }
 
       const updatedLead = await res.json();
-      console.log("Updated lead from API:", updatedLead);
       
-      // Transform API response to match frontend format - use actual data from API
-      const transformedLead = {
-        ...leadToUpdate,
+      // Update with final data from API if necessary (e.g. IDs, timestamps)
+      const finalLead = {
+        ...optimisticLead,
         id: updatedLead.lead?.id?.toString() || id,
-        name: updatedLead.lead?.full_name || editData.name,
-        company: updatedLead.lead?.website_url?.replace(/^https?:\/\//, "").split("/")[0] || editData.company || leadToUpdate.company,
-        email: updatedLead.lead?.email || editData.email,
-        phone: updatedLead.lead?.phone_number || editData.phone,
-        status: "Lead",
-        leadType: updatedLead.lead?.lead_status || editData.leadType,
-        projectCategory: updatedLead.lead?.lead_category || editData.projectCategory,
-        industry: updatedLead.lead?.lead_category || editData.projectCategory,
-        country: updatedLead.lead?.country !== undefined ? updatedLead.lead.country : (editData.country !== undefined ? editData.country : leadToUpdate.country || ""),
-        website: updatedLead.lead?.website_url !== undefined ? updatedLead.lead.website_url : editData.website,
-        notes: updatedLead.lead?.message || editData.notes,
         joinedDate: updatedLead.lead?.created_at ? updatedLead.lead.created_at.split("T")[0] : leadToUpdate.joinedDate,
-        lastContact: updatedLead.lead?.updated_at ? updatedLead.lead.updated_at.split("T")[0] : new Date().toISOString().split("T")[0],
-        avatar: `https://picsum.photos/100/100?random=${updatedLead.lead?.id || id}`,
+        lastContact: updatedLead.lead?.updated_at ? updatedLead.lead.updated_at.split("T")[0] : optimisticLead.lastContact,
       };
 
-      console.log("Transformed lead for frontend:", transformedLead);
-      console.log("=== END DEBUG ===");
-
-      // Update local state after successful API call
-      setLeads((prev) => prev.map((l) => (l.id == id ? transformedLead : l)));
+      setLeads((prev) => prev.map((l) => (l.id == id ? finalLead : l)));
+      setClients((prev) => prev.map((c) => (c.id == id ? finalLead : c)));
       
-      // Also update clients array if this lead exists there
-      setClients((prev) => prev.map((c) => (c.id == id ? transformedLead : c)));
-      
-      console.log("✅ Lead updated successfully in both leads and clients arrays!");
-      
-      return transformedLead;
+      return finalLead;
     } catch (error) {
       console.error("Error updating lead:", error);
       throw error;
@@ -607,7 +607,7 @@ function AppRoutes() {
 
       if (res.ok) {
         setFollowUps((prev) => prev.map((f) => 
-          f.id == id ? { ...f, status: nextStatus, follow_brief: brief } : f
+          f.id == id ? { ...f, status: nextStatus, followup_status: nextStatus, follow_brief: brief } : f
         ));
       } else {
         console.error("Failed to toggle follow-up status:", await res.json());
@@ -622,7 +622,7 @@ function AppRoutes() {
     const newClient = {
       id: `c-${Date.now()}`,
       name: enquiry.name,
-      company: enquiry.website ? enquiry.website.replace(/^https?:\/\//, "").split("/")[0] : "Independent",
+      company: enquiry.website ? enquiry.website.replace(/^https?:\/\//, "").split("/")[0] : "",
       email: enquiry.email,
       phone: enquiry.phone,
       status: "Lead",

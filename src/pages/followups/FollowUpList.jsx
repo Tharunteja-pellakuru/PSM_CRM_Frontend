@@ -450,7 +450,7 @@ const FollowUpList = ({
                         e.stopPropagation();
                         setFormData({
                           ...f,
-                          followup_status: "pending",
+                          followup_status: f.status || f.followup_status || "pending",
                           followup_date: f.dueDate
                             ? new Date(f.dueDate).toISOString().split("T")[0]
                             : f.followup_date ||
@@ -710,7 +710,7 @@ const FollowUpList = ({
                       >
                         <span className="text-primary truncate max-w-[90%]">
                           {formData.clientId
-                            ? clients.find((c) => c.id === formData.clientId)
+                            ? clients.find((c) => c.id == formData.clientId)
                                 ?.name
                             : typeFilter === "Active"
                               ? "Select a client..."
@@ -773,7 +773,7 @@ const FollowUpList = ({
                                       setClientSearchTerm("");
                                     }}
                                     className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
-                                      formData.clientId === c.id
+                                      formData.clientId == c.id
                                         ? "bg-slate-100 text-secondary"
                                         : "text-[#18254D] hover:bg-slate-50"
                                     }`}

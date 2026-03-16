@@ -943,7 +943,7 @@ const EnquiryList = ({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-primary  tracking-widest ml-1">
-                    Website URL
+                    Website URL (Optional)
                   </label>
                   <input
                     type="text"
@@ -1059,7 +1059,7 @@ const EnquiryList = ({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
-                    Website URL
+                    Website URL (Optional)
                   </label>
                   <input
                     type="text"
