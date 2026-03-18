@@ -31,3 +31,11 @@ export const getAuthHeaders = () => {
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 };
+
+// Create headers for multipart/form-data (let browser set Content-Type)
+export const getMultipartAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};

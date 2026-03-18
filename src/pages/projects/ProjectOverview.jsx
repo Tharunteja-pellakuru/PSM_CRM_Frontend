@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Eye,
   Download,
+  Upload,
 } from "lucide-react";
 import DatePicker from "../../components/ui/DatePicker";
 import {
@@ -42,10 +43,30 @@ const ProjectOverview = ({
     category: project?.category || 1,
     priority: project?.priority || "Medium",
     progress: project?.progress || 0,
+    onboardingDate: project?.onboardingDate || "",
     deadline: project?.deadline || "",
     budget: project?.budget || 0,
     description: project?.description || "",
+    scopeFile: null,
   });
+
+  // Sync formData with project prop when it changes
+  React.useEffect(() => {
+    if (project && !isEditing) {
+      setFormData({
+        name: project.name || "",
+        status: project.status || "Pending",
+        category: project.category || 1,
+        priority: project.priority || "Medium",
+        progress: project.progress || 0,
+        onboardingDate: project.onboardingDate || "",
+        deadline: project.deadline || "",
+        budget: project.budget || 0,
+        description: project.description || "",
+        scopeFile: null,
+      });
+    }
+  }, [project, isEditing]);
 
   // State for custom dropdowns
   const [activeDropdown, setActiveDropdown] = useState(null); // 'status', 'priority', 'category'
@@ -282,7 +303,7 @@ const ProjectOverview = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* <div className="space-y-2">
+              <div className="space-y-2">
                 <label className="text-[10px] font-bold text-primary  tracking-widest ml-1 opacity-50">
                   Project Name
                 </label>
@@ -300,18 +321,14 @@ const ProjectOverview = ({
                     {formData.name}
                   </div>
                 )}
-              </div> */}
+              </div>
 
               {isEditing ? (
                 <CustomDropdown
                   label="Current Status"
                   value={formData.status}
                   field="status"
-                  options={
-                    formData.category === 1
-                      ? ["Pending", "In Progress", "Testing", "Live"]
-                      : ["Pending", "In Progress", "Completed"]
-                  }
+                  options={["Hold", "In Progress", "Completed"]}
                   icon={Zap}
                 />
               ) : (
@@ -336,7 +353,7 @@ const ProjectOverview = ({
                   label="Priority Level"
                   value={formData.priority}
                   field="priority"
-                  options={["Low", "Medium", "High", "Critical"]}
+                  options={["Low", "Medium", "High"]}
                   icon={AlertCircle}
                 />
               ) : (
@@ -432,7 +449,34 @@ const ProjectOverview = ({
                     </p>
                   </div>
                 </div>
-                {project?.scopeDocument ? (
+                {isEditing ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      id="scope-upload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setFormData({ ...formData, scopeFile: file });
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="scope-upload"
+                      className="px-3 py-2 bg-secondary text-white rounded-lg text-[10px] font-bold tracking-widest hover:bg-secondary/90 transition-all flex items-center gap-2 cursor-pointer"
+                    >
+                      <Upload size={14} />
+                      {formData.scopeFile ? "File Selected" : "Upload New PDF"}
+                    </label>
+                    {formData.scopeFile && (
+                      <span className="text-[10px] font-bold text-secondary truncate max-w-[100px]">
+                        {formData.scopeFile.name}
+                      </span>
+                    )}
+                  </div>
+                ) : project?.scopeDocument ? (
                   <div className="flex items-center gap-2">
                     <a
                       href={`${BASE_URL}/uploads/${project.scopeDocument}`}
@@ -582,7 +626,30 @@ const ProjectOverview = ({
                 <p className="text-[9px] font-bold text-white/40  tracking-widest">
                   Onboarding Date
                 </p>
-                <p className="text-sm font-bold">Jan 12, 2026</p>
+                {isEditing ? (
+                  <DatePicker
+                    value={formData.onboardingDate}
+                    onChange={(val) =>
+                      setFormData({
+                        ...formData,
+                        onboardingDate: val,
+                      })
+                    }
+                  />
+                ) : (
+                  <p className="text-sm font-bold">
+                    {formData.onboardingDate
+                      ? new Date(formData.onboardingDate).toLocaleDateString(
+                          [],
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        )
+                      : "No date set"}
+                  </p>
+                )}
               </div>
 
               <div className="h-px bg-white/10 w-full" />

@@ -8,7 +8,7 @@ import {
   useParams,
   useLocation,
 } from "react-router-dom";
-import { getAuthHeaders, isAuthenticated, logout } from "./utils/auth";
+import { getAuthHeaders, getMultipartAuthHeaders, isAuthenticated, logout } from "./utils/auth";
 import Layout from "./layouts/Layout";
 import Dashboard from "./pages/dashboard/Dashboard";
 import ClientList from "./pages/clients/ClientList";
@@ -1002,8 +1002,47 @@ function AppRoutes() {
     navigate(`/projects/${project.id}`);
   }
 
-  function handleUpdateProject(updated) {
-    setProjects((prev) => prev.map((p) => (p.id == updated.id ? updated : p)));
+  async function handleUpdateProject(updated) {
+    try {
+      const formData = new FormData();
+      formData.append("project_name", updated.name);
+      formData.append("project_description", updated.description);
+      formData.append("project_category", updated.category);
+      formData.append("project_status", updated.status);
+      formData.append("project_priority", updated.priority);
+      formData.append("project_budget", updated.budget);
+      formData.append("onboarding_date", updated.onboardingDate);
+      formData.append("deadline_date", updated.deadline);
+
+      if (updated.scopeFile) {
+        formData.append("scope_document", updated.scopeFile);
+      } else if (updated.scopeDocument) {
+        formData.append("scope_document", updated.scopeDocument);
+      }
+
+      const res = await fetch(`${BASE_URL}/api/update-project/${updated.id}`, {
+        method: "PUT",
+        headers: getMultipartAuthHeaders(),
+        body: formData,
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        // If the server returned a new filename for the document, update it in local state
+        const updatedProject = {
+          ...updated,
+          scopeDocument: result.project?.scope_document || updated.scopeDocument
+        };
+        setProjects((prev) => prev.map((p) => (p.id == updated.id ? updatedProject : p)));
+      } else {
+        const errorData = await res.json();
+        console.error("Failed to update project:", errorData);
+        alert("Failed to update project. Rolling back...");
+      }
+    } catch (err) {
+      console.error("Error updating project:", err);
+      alert("An error occurred while updating project.");
+    }
   }
 
   function handleAddActivity(data) {
