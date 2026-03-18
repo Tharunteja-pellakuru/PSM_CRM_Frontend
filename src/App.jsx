@@ -282,7 +282,10 @@ function AppRoutes() {
           deadline: p.deadline_date?.split("T")[0],
           onboardingDate: p.onboarding_date?.split("T")[0],
           priority: p.project_priority,
-          category: p.project_category,
+          category: typeof p.project_category === 'string' 
+            ? (REVERSE_CATEGORY_MAP[p.project_category] || 1)
+            : (p.project_category || 1),
+          scopeDocument: p.scope_document,
           progress: 0, // Calculate or add to table if needed
         }));
         setProjects(transformedProjects);

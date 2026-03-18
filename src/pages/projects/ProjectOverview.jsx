@@ -60,6 +60,25 @@ const ProjectOverview = ({
     setIsEditing(false);
   };
 
+  const handleDownload = async (filename) => {
+    try {
+      const response = await fetch(`${BASE_URL}/uploads/${filename}`);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+      // Fallback to direct link if fetch fails
+      window.open(`${BASE_URL}/uploads/${filename}`, "_blank");
+    }
+  };
+
   const getPriorityStyles = (priority) => {
     switch (priority?.toLowerCase()) {
       case "critical":
@@ -413,7 +432,7 @@ const ProjectOverview = ({
                     </p>
                   </div>
                 </div>
-                {project?.scopeDocument && (
+                {project?.scopeDocument ? (
                   <div className="flex items-center gap-2">
                     <a
                       href={`${BASE_URL}/uploads/${project.scopeDocument}`}
@@ -425,16 +444,19 @@ const ProjectOverview = ({
                       <Eye size={14} className="text-secondary" />
                       View
                     </a>
-                    <a
-                      href={`${BASE_URL}/uploads/${project.scopeDocument}`}
-                      download={project.scopeDocument}
+                    <button
+                      onClick={() => handleDownload(project.scopeDocument)}
                       className="px-3 py-2 bg-white border border-slate-200 text-[#18254D] rounded-lg text-[10px] font-bold tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
                       title="Download Document"
                     >
                       <Download size={14} className="text-secondary" />
                       Download
-                    </a>
+                    </button>
                   </div>
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-400 tracking-widest bg-slate-100/50 px-3 py-1 rounded-md border border-slate-100">
+                    No Document
+                  </span>
                 )}
               </div>
             </div>

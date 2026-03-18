@@ -368,11 +368,11 @@ const ClientList = ({
               Clients
             </h2>
             <p className="text-xs md:text-sm text-textMuted font-medium leading-relaxed">
-              Manage your network of "clients" and strategic partnerships.
+              Manage your network of clients and strategic partnerships.
             </p>
           </div>
           <div className="w-full lg:w-auto">
-            <button
+            {/* <button
               onClick={() => setShowAddModal(true)}
               className="w-full lg:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all text-[11px] font-bold  tracking-wider shadow-lg active:scale-95 group"
             >
@@ -382,7 +382,7 @@ const ClientList = ({
                 className="group-hover:rotate-90 transition-transform"
               />
               Add Client
-            </button>
+            </button> */}
           </div>
         </div>
 

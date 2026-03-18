@@ -20,7 +20,10 @@ import {
   Search,
 } from "lucide-react";
 import DatePicker from "../../components/ui/DatePicker";
-import { CATEGORY_MAP, REVERSE_CATEGORY_MAP } from "../../constants/categoryConstants";
+import {
+  CATEGORY_MAP,
+  REVERSE_CATEGORY_MAP,
+} from "../../constants/categoryConstants";
 import { countries } from "../../utils/countries";
 import {
   indianStates,
@@ -31,32 +34,24 @@ import SearchableDropdown from "../../components/common/SearchableDropdown";
 
 const TECH_COLUMNS = [
   {
-    id: "Planning",
-    title: "Planning",
+    id: "In Progress",
+    title: "In Progress",
     color: "text-info",
     dotColor: "bg-info",
     activeTabBg: "bg-info/10",
     activeTabText: "text-info",
   },
   {
-    id: "In Progress",
-    title: "In Progress",
+    id: "Hold",
+    title: "Hold",
     color: "text-warning",
     dotColor: "bg-warning",
     activeTabBg: "bg-warning/10",
     activeTabText: "text-warning",
   },
   {
-    id: "Testing",
-    title: "Testing",
-    color: "text-secondary",
-    dotColor: "bg-secondary",
-    activeTabBg: "bg-secondary/10",
-    activeTabText: "text-secondary",
-  },
-  {
-    id: "Live",
-    title: "Live",
+    id: "Completed",
+    title: "Completed",
     color: "text-success",
     dotColor: "bg-success",
     activeTabBg: "bg-success/10",
@@ -66,16 +61,16 @@ const TECH_COLUMNS = [
 
 const MEDIA_COLUMNS = [
   {
-    id: "Planning",
-    title: "Planning",
+    id: "In Progress",
+    title: "In Progress",
     color: "text-info",
     dotColor: "bg-info",
     activeTabBg: "bg-info/10",
     activeTabText: "text-info",
   },
   {
-    id: "In Progress",
-    title: "In Progress",
+    id: "Hold",
+    title: "Hold",
     color: "text-warning",
     dotColor: "bg-warning",
     activeTabBg: "bg-warning/10",
@@ -366,9 +361,9 @@ const ProjectCard = ({
           <span>
             {project.deadline
               ? new Date(project.deadline).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })
+                  month: "short",
+                  day: "numeric",
+                })
               : "No deadline"}
           </span>
         </div>
@@ -404,11 +399,11 @@ const ProjectBoard = ({
     if (isCategoryDropdownOpen && categoryButtonRef.current) {
       const rect = categoryButtonRef.current.getBoundingClientRect();
       setCategoryDropdownStyle({
-        position: 'fixed',
+        position: "fixed",
         top: `${rect.bottom + 8}px`,
         left: `${rect.left}px`,
         width: `${rect.width}px`,
-        zIndex: 9999
+        zIndex: 9999,
       });
     }
   }, [isCategoryDropdownOpen]);
@@ -416,7 +411,11 @@ const ProjectBoard = ({
   useEffect(() => {
     const handleScrollResize = (e) => {
       if (isCategoryDropdownOpen) {
-        if (e.type === 'scroll' && e.target.closest && e.target.closest('.category-dropdown')) {
+        if (
+          e.type === "scroll" &&
+          e.target.closest &&
+          e.target.closest(".category-dropdown")
+        ) {
           return;
         }
         setIsCategoryDropdownOpen(false);
@@ -431,7 +430,21 @@ const ProjectBoard = ({
       window.removeEventListener("resize", handleScrollResize, true);
     };
   }, [isCategoryDropdownOpen]);
-  const [activeStage, setActiveStage] = useState("Planning");
+  const COLUMNS =
+    selectedCategory === 1
+      ? TECH_COLUMNS
+      : selectedCategory === 2
+        ? MEDIA_COLUMNS
+        : ALL_COLUMNS;
+
+  const [activeStage, setActiveStage] = useState(COLUMNS[0].id);
+
+  // Sync activeStage when selectedCategory changes if current activeStage is not in new COLUMNS
+  useEffect(() => {
+    if (!COLUMNS.find(c => c.id === activeStage)) {
+      setActiveStage(COLUMNS[0].id);
+    }
+  }, [selectedCategory, COLUMNS, activeStage]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
@@ -455,7 +468,7 @@ const ProjectBoard = ({
     scopeDocument: "",
   });
 
-  const COLUMNS = selectedCategory === 1 ? TECH_COLUMNS : selectedCategory === 2 ? MEDIA_COLUMNS : ALL_COLUMNS;
+
 
   const getAvailableStatuses = (currentStatus) => {
     return COLUMNS.filter((col) => col.id !== currentStatus).map(
@@ -601,9 +614,7 @@ const ProjectBoard = ({
                   }
                   className="w-full lg:w-auto flex items-center justify-between gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-bold  tracking-widest text-primary hover:bg-white hover:border-slate-200 transition-all min-w-[160px] shadow-sm shadow-slate-200/50 group"
                 >
-                  <span>
-                    {CATEGORY_MAP[selectedCategory]} Projects
-                  </span>
+                  <span>{CATEGORY_MAP[selectedCategory]} Projects</span>
                   <ChevronDown
                     size={16}
                     strokeWidth={2.5}
@@ -611,37 +622,39 @@ const ProjectBoard = ({
                   />
                 </button>
 
-                {isCategoryDropdownOpen && createPortal(
-                  <>
-                    <div
-                      className="fixed inset-0 z-[9998]"
-                      onClick={() => setIsCategoryDropdownOpen(false)}
-                    />
-                    <div 
-                      className="category-dropdown bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[9999] animate-fade-in origin-top"
-                      style={categoryDropdownStyle}
-                    >
-                      <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
-                        <p className="text-[9px] font-black text-white/50  tracking-widest">
-                          Select Category
-                        </p>
-                      </div>
-                      {[1, 2, 3].map((catId) => (
-                        <button
-                          key={catId}
-                          onClick={() => handleCategoryChange(catId)}
-                          className={`w-full text-left px-5 py-3.5 text-[10px] font-bold  tracking-widest transition-colors ${selectedCategory === catId
-                            ? "bg-slate-100 text-secondary"
-                            : "text-[#18254D] hover:bg-slate-50"
+                {isCategoryDropdownOpen &&
+                  createPortal(
+                    <>
+                      <div
+                        className="fixed inset-0 z-[9998]"
+                        onClick={() => setIsCategoryDropdownOpen(false)}
+                      />
+                      <div
+                        className="category-dropdown bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[9999] animate-fade-in origin-top"
+                        style={categoryDropdownStyle}
+                      >
+                        <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                          <p className="text-[9px] font-black text-white/50  tracking-widest">
+                            Select Category
+                          </p>
+                        </div>
+                        {[1, 2, 3].map((catId) => (
+                          <button
+                            key={catId}
+                            onClick={() => handleCategoryChange(catId)}
+                            className={`w-full text-left px-5 py-3.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                              selectedCategory === catId
+                                ? "bg-slate-100 text-secondary"
+                                : "text-[#18254D] hover:bg-slate-50"
                             }`}
-                        >
-                          {CATEGORY_MAP[catId]} Projects
-                        </button>
-                      ))}
-                    </div>
-                  </>,
-                  document.body
-                )}
+                          >
+                            {CATEGORY_MAP[catId]} Projects
+                          </button>
+                        ))}
+                      </div>
+                    </>,
+                    document.body,
+                  )}
               </div>
             </div>
           </div>
@@ -661,17 +674,19 @@ const ProjectBoard = ({
                 <button
                   key={column.id}
                   onClick={() => setActiveStage(column.id)}
-                  className={`px-3 md:px-5 h-full rounded-xl text-[10px] font-bold  tracking-wider transition-all flex items-center justify-center min-w-[90px] md:min-w-[100px] border border-transparent whitespace-nowrap gap-2 ${isActive
-                    ? "text-primary bg-white shadow-md border-slate-100"
-                    : "text-slate-400 hover:text-slate-500 hover:bg-white/50"
-                    }`}
+                  className={`px-3 md:px-5 h-full rounded-xl text-[10px] font-bold  tracking-wider transition-all flex items-center justify-center min-w-[90px] md:min-w-[100px] border border-transparent whitespace-nowrap gap-2 ${
+                    isActive
+                      ? "text-primary bg-white shadow-md border-slate-100"
+                      : "text-slate-400 hover:text-slate-500 hover:bg-white/50"
+                  }`}
                 >
                   <span>{column.title}</span>
                   <span
-                    className={`min-w-[20px] h-5 px-1.5 rounded-full text-[9px] font-bold flex items-center justify-center ${isActive
-                      ? "bg-primary text-white"
-                      : "bg-slate-200 text-slate-500"
-                      }`}
+                    className={`min-w-[20px] h-5 px-1.5 rounded-full text-[9px] font-bold flex items-center justify-center ${
+                      isActive
+                        ? "bg-primary text-white"
+                        : "bg-slate-200 text-slate-500"
+                    }`}
                   >
                     {count}
                   </span>
@@ -705,12 +720,17 @@ const ProjectBoard = ({
               <div className="space-y-10">
                 {Object.entries(
                   filteredProjects.reduce((groups, project) => {
-                    const date = project.deadline ? new Date(project.deadline) : new Date();
-                    const month = date.toLocaleString("default", { month: "long", year: "numeric" });
+                    const date = project.deadline
+                      ? new Date(project.deadline)
+                      : new Date();
+                    const month = date.toLocaleString("default", {
+                      month: "long",
+                      year: "numeric",
+                    });
                     if (!groups[month]) groups[month] = [];
                     groups[month].push(project);
                     return groups;
-                  }, {})
+                  }, {}),
                 ).map(([month, monthProjects]) => (
                   <div key={month} className="space-y-5">
                     <div className="flex items-center gap-4">
@@ -731,7 +751,9 @@ const ProjectBoard = ({
                           clients={clients}
                           onEdit={handleEditProject}
                           onUpdateProject={onUpdateProject}
-                          availableStatuses={getAvailableStatuses(project.status)}
+                          availableStatuses={getAvailableStatuses(
+                            project.status,
+                          )}
                           onSelectProject={onSelectProject}
                         />
                       ))}
@@ -1001,7 +1023,6 @@ const ProjectBoard = ({
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>
-
               </div>
 
               {/* PROJECT DETAILS HEADING */}
@@ -1081,10 +1102,11 @@ const ProjectBoard = ({
                                 });
                                 setIsStatusDropdownOpen(false);
                               }}
-                              className={`w-full text-left px-5 py-3.5 text-[10px] font-bold  tracking-widest transition-colors ${formData.projectStatus === status
-                                ? "bg-slate-100 text-secondary"
-                                : "text-[#18254D] hover:bg-slate-50"
-                                }`}
+                              className={`w-full text-left px-5 py-3.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                formData.projectStatus === status
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
                             >
                               {status}
                             </button>
@@ -1111,10 +1133,11 @@ const ProjectBoard = ({
                             projectStatus: "Planning",
                           })
                         }
-                        className={`flex-1 flex items-center justify-center p-2.5 border-2 rounded-xl transition-all font-bold  text-[10px] tracking-widest ${formData.projectCategory === catId
-                          ? "border-primary bg-primary/5 text-primary shadow-sm"
-                          : "border-slate-100 text-slate-400 hover:border-slate-200"
-                          }`}
+                        className={`flex-1 flex items-center justify-center p-2.5 border-2 rounded-xl transition-all font-bold  text-[10px] tracking-widest ${
+                          formData.projectCategory === catId
+                            ? "border-primary bg-primary/5 text-primary shadow-sm"
+                            : "border-slate-100 text-slate-400 hover:border-slate-200"
+                        }`}
                       >
                         {CATEGORY_MAP[catId]}
                       </button>
@@ -1166,10 +1189,11 @@ const ProjectBoard = ({
                                 });
                                 setIsPriorityDropdownOpen(false);
                               }}
-                              className={`w-full text-left px-5 py-3.5 text-[10px] font-black  tracking-widest transition-colors ${formData.projectPriority === level
-                                ? "bg-slate-100 text-secondary"
-                                : "text-[#18254D] hover:bg-slate-50"
-                                }`}
+                              className={`w-full text-left px-5 py-3.5 text-[10px] font-black  tracking-widest transition-colors ${
+                                formData.projectPriority === level
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
                             >
                               {level}
                             </button>
@@ -1202,12 +1226,9 @@ const ProjectBoard = ({
                 {/* PROJECT BUDGET */}
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 flex items-center gap-1.5">
-                    PROJECT BUDGET (INR)
+                    PROJECT BUDGET
                   </label>
                   <div className="relative">
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                      ₹
-                    </div>
                     <input
                       type="number"
                       placeholder="e.g. 50000"
@@ -1280,9 +1301,10 @@ const ProjectBoard = ({
                       <span
                         className={`text-sm font-bold ${formData.scopeDocument ? "text-[#18254D]" : "text-slate-400"}`}
                       >
-                        {formData.scopeDocument instanceof File 
-                          ? formData.scopeDocument.name 
-                          : typeof formData.scopeDocument === "string" && formData.scopeDocument 
+                        {formData.scopeDocument instanceof File
+                          ? formData.scopeDocument.name
+                          : typeof formData.scopeDocument === "string" &&
+                              formData.scopeDocument
                             ? formData.scopeDocument
                             : "Click to upload scope document (PDF)"}
                       </span>

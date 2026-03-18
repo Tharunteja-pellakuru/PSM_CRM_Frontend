@@ -78,8 +78,10 @@ const ClientDetail = ({
 
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [isEditCategoryDropdownOpen, setIsEditCategoryDropdownOpen] = useState(false);
-  const [isEditStatusDropdownOpen, setIsEditStatusDropdownOpen] = useState(false);
+  const [isEditCategoryDropdownOpen, setIsEditCategoryDropdownOpen] =
+    useState(false);
+  const [isEditStatusDropdownOpen, setIsEditStatusDropdownOpen] =
+    useState(false);
   const countryButtonRef = useRef(null);
   const [countryDropdownStyle, setCountryDropdownStyle] = useState({});
 
@@ -502,12 +504,15 @@ const ClientDetail = ({
                       <button
                         type="button"
                         onClick={() =>
-                          setIsEditCategoryDropdownOpen(!isEditCategoryDropdownOpen)
+                          setIsEditCategoryDropdownOpen(
+                            !isEditCategoryDropdownOpen,
+                          )
                         }
                         className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
                       >
                         <span className="text-primary truncate">
-                          {CATEGORY_MAP[editFormData.projectCategory] || "Select Category"}
+                          {CATEGORY_MAP[editFormData.projectCategory] ||
+                            "Select Category"}
                         </span>
                         <ChevronDown
                           size={16}
@@ -534,7 +539,10 @@ const ClientDetail = ({
                                 key={catId}
                                 type="button"
                                 onClick={() => {
-                                  setEditFormData({ ...editFormData, projectCategory: catId });
+                                  setEditFormData({
+                                    ...editFormData,
+                                    projectCategory: catId,
+                                  });
                                   setIsEditCategoryDropdownOpen(false);
                                 }}
                                 className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
@@ -587,15 +595,18 @@ const ClientDetail = ({
                                 Select Status
                               </p>
                             </div>
-                            {(client.isConverted 
-                              ? ["Hot", "Warm", "Cold", "Converted"] 
+                            {(client.isConverted
+                              ? ["Hot", "Warm", "Cold", "Converted"]
                               : ["Hot", "Warm", "Cold"]
                             ).map((status) => (
                               <button
                                 key={status}
                                 type="button"
                                 onClick={() => {
-                                  setEditFormData({ ...editFormData, leadType: status });
+                                  setEditFormData({
+                                    ...editFormData,
+                                    leadType: status,
+                                  });
                                   setIsEditStatusDropdownOpen(false);
                                 }}
                                 className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
@@ -605,10 +616,24 @@ const ClientDetail = ({
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
-                                  {status === "Hot" && <Flame size={12} className="text-error" />}
-                                  {status === "Warm" && <Sun size={12} className="text-warning" />}
-                                  {status === "Cold" && <Snowflake size={12} className="text-info" />}
-                                  {status === "Converted" && <UserCheck size={12} className="text-success" />}
+                                  {status === "Hot" && (
+                                    <Flame size={12} className="text-error" />
+                                  )}
+                                  {status === "Warm" && (
+                                    <Sun size={12} className="text-warning" />
+                                  )}
+                                  {status === "Cold" && (
+                                    <Snowflake
+                                      size={12}
+                                      className="text-info"
+                                    />
+                                  )}
+                                  {status === "Converted" && (
+                                    <UserCheck
+                                      size={12}
+                                      className="text-success"
+                                    />
+                                  )}
                                   <span>{status}</span>
                                 </div>
                               </button>
@@ -973,14 +998,14 @@ const ClientDetail = ({
                       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 group relative overflow-hidden hover:shadow-md hover:border-secondary/30 transition-all">
                         <div className="w-8 h-8 bg-green-500/10 text-green-600 rounded-xl flex items-center justify-center mb-3 group-hover:bg-green-600 group-hover:text-white transition-all border border-green-500/20">
                           <span className="text-xs font-bold leading-none">
-                            $
+                            {commonCurrencies.find(c => c.code === client.currency)?.symbol || "$"}
                           </span>
                         </div>
                         <h3 className="text-[9px] font-bold text-slate-400  tracking-widest mb-1">
                           Billing Currency
                         </h3>
                         <p className="text-lg font-bold text-primary tracking-tight ">
-                          {client.currency || "USD"}
+                          {client.currency || ""}
                         </p>
                       </div>
                       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 group relative overflow-hidden hover:shadow-md hover:border-secondary/30 transition-all">
@@ -994,7 +1019,7 @@ const ClientDetail = ({
                           {client.clientStatus || "Active"}
                         </p>
                       </div>
-                      <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 group relative overflow-hidden md:col-span-2 hover:shadow-md hover:border-secondary/30 transition-all">
+                      {/* <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 group relative overflow-hidden md:col-span-2 hover:shadow-md hover:border-secondary/30 transition-all">
                         <div className="w-8 h-8 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-3 group-hover:bg-primary group-hover:text-white transition-all border border-primary/20">
                           <Briefcase size={16} strokeWidth={2.5} />
                         </div>
@@ -1031,7 +1056,7 @@ const ClientDetail = ({
                             </p>
                           )}
                         </div>
-                      </div>
+                      </div> */}
                     </>
                   )}
                 </div>
@@ -1040,16 +1065,8 @@ const ClientDetail = ({
                 <div className="space-y-6 animate-fade-in">
                   <div className="flex justify-between items-center">
                     <h3 className="text-sm font-bold text-primary tracking-tight">
-                      Lead Conversations
+                      {isLead ? "Lead Conversations" : "Client Conversations"}
                     </h3>
-                    {!isLead && (
-                      <button
-                        onClick={() => setIsLogging(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-[#18254D] text-white rounded-xl text-[10px] font-bold  tracking-widest hover:bg-[#1e2e5e] transition-all shadow-lg active:scale-95"
-                      >
-                        <Plus size={14} /> Log Entry
-                      </button>
-                    )}
                   </div>
 
                   {isLead ? (
@@ -1428,16 +1445,17 @@ const ClientDetail = ({
                         <h4 className="text-sm font-bold text-primary truncate mb-1">
                           {project.name}
                         </h4>
-                        <div className="w-full bg-slate-50 border border-slate-100 rounded-full h-2 overflow-hidden mt-3">
+                        {/* <div className="w-full bg-slate-50 border border-slate-100 rounded-full h-2 overflow-hidden mt-3">
                           <div
                             className="bg-secondary h-full rounded-full transition-all duration-1000"
                             style={{ width: `${project.progress}%` }}
                           ></div>
-                        </div>
+                        </div> */}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-[10px] font-bold text-primary">
-                          ${(project.budget / 1000).toFixed(0)}k
+                          {commonCurrencies.find(c => c.code === client.currency)?.symbol || "$"} {(project.budget / 1000).toFixed(0)}
+                          k
                         </p>
                         <p className="text-[8px] font-bold text-slate-400  tracking-widest mt-1">
                           {project.status}
