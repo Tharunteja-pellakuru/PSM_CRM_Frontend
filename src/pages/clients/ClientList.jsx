@@ -397,7 +397,7 @@ const ClientList = ({
               />
               <input
                 type="text"
-                placeholder={`Search $"clients"...`}
+                placeholder={`Search Clients...`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full h-[38px] pl-11 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium focus:outline-none focus:ring-4 focus:ring-secondary/10 focus:border-secondary transition-all"
@@ -581,16 +581,16 @@ const ClientList = ({
               <thead>
                 <tr className="bg-slate-50/50">
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400  tracking-widest border-b border-slate-100">
-                    "Client Name"
+                    Client Name
                   </th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400  tracking-widest border-b border-slate-100">
                     Contact Details
                   </th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-400  tracking-widest border-b border-slate-100">
-                    "Client Category"
+                    Client Category
                   </th>
                   <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-400  tracking-widest border-b border-slate-100">
-                    "Status"
+                    Status
                   </th>
                   <th className="px-6 py-4 text-right text-[10px] font-bold text-slate-400  tracking-widest border-b border-slate-100">
                     Control

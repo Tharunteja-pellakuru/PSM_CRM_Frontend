@@ -26,6 +26,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Globe,
+  UserCheck,
 } from "lucide-react";
 import { MOCK_ACTIVITIES } from "../../constants/mockData";
 import {
@@ -77,7 +78,8 @@ const ClientDetail = ({
 
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [countrySearchTerm, setCountrySearchTerm] = useState("");
+  const [isEditCategoryDropdownOpen, setIsEditCategoryDropdownOpen] = useState(false);
+  const [isEditStatusDropdownOpen, setIsEditStatusDropdownOpen] = useState(false);
   const countryButtonRef = useRef(null);
   const [countryDropdownStyle, setCountryDropdownStyle] = useState({});
 
@@ -174,6 +176,16 @@ const ClientDetail = ({
 
   return (
     <div className="w-full relative h-full">
+      <div className="max-w-2xl">
+        <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-primary tracking-tight mb-2">
+          {isLead ? "Lead Overview" : "Client Overview"}
+        </h2>
+        <p className="text-sm text-textMuted font-medium leading-relaxed mb-5">
+          {isLead
+            ? "Get a complete overview of lead details."
+            : "Get a complete overview of client details."}
+        </p>
+      </div>
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[calc(100vh-8rem)] animate-fade-in relative">
         {/* Header */}
         <div className="p-4 md:p-6 border-b border-slate-100 flex flex-col lg:flex-row items-start lg:items-center justify-between bg-white gap-4">
@@ -483,73 +495,124 @@ const ClientDetail = ({
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-primary  tracking-widest ml-1">
+                    <label className="text-[10px] font-bold text-primary  tracking-widest ml-1 uppercase">
                       {isLead ? "Lead" : "Client"} Category
                     </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[1, 2, 3].map((catId) => (
-                        <button
-                          key={catId}
-                          type="button"
-                          onClick={() =>
-                            setEditFormData({
-                              ...editFormData,
-                              projectCategory: catId,
-                            })
-                          }
-                          className={`py-3 px-4 rounded-xl border-2 text-[10px] font-bold tracking-widest transition-all ${
-                            editFormData.projectCategory === catId
-                              ? catId === 1
-                                ? "bg-secondary/10 border-secondary text-secondary shadow-md"
-                                : catId === 2
-                                  ? "bg-blue-500/10 border-blue-500 text-blue-500 shadow-md"
-                                  : "bg-purple-500/10 border-purple-500 text-purple-500 shadow-md"
-                              : "bg-white border-slate-100 text-slate-400 hover:border-slate-300"
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIsEditCategoryDropdownOpen(!isEditCategoryDropdownOpen)
+                        }
+                        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                      >
+                        <span className="text-primary truncate">
+                          {CATEGORY_MAP[editFormData.projectCategory] || "Select Category"}
+                        </span>
+                        <ChevronDown
+                          size={16}
+                          className={`text-slate-400 transition-transform ${
+                            isEditCategoryDropdownOpen ? "rotate-180" : ""
                           }`}
-                        >
-                          {CATEGORY_MAP[catId].toUpperCase()}
-                        </button>
-                      ))}
+                        />
+                      </button>
+
+                      {isEditCategoryDropdownOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-[80]"
+                            onClick={() => setIsEditCategoryDropdownOpen(false)}
+                          />
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                            <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                              <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                                Select Category
+                              </p>
+                            </div>
+                            {[1, 2, 3].map((catId) => (
+                              <button
+                                key={catId}
+                                type="button"
+                                onClick={() => {
+                                  setEditFormData({ ...editFormData, projectCategory: catId });
+                                  setIsEditCategoryDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                  editFormData.projectCategory === catId
+                                    ? "bg-slate-100 text-secondary"
+                                    : "text-[#18254D] hover:bg-slate-50"
+                                }`}
+                              >
+                                {CATEGORY_MAP[catId]}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-primary  tracking-widest ml-1">
+                    <label className="text-[10px] font-bold text-primary  tracking-widest ml-1 uppercase">
                       {isLead ? "Lead Status" : "Project Status"}
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {["Hot", "Warm", "Cold"].map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() =>
-                            setEditFormData({
-                              ...editFormData,
-                              leadType: type,
-                            })
-                          }
-                          className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all ${
-                            editFormData.leadType === type
-                              ? type === "Hot"
-                                ? "bg-error/5 border-error text-error shadow-lg shadow-error/10 scale-[1.02]"
-                                : type === "Warm"
-                                  ? "bg-warning/5 border-warning text-warning shadow-lg shadow-warning/10 scale-[1.02]"
-                                  : "bg-info/5 border-info text-info shadow-lg shadow-info/10 scale-[1.02]"
-                              : "bg-slate-50 border-slate-100 text-slate-400 grayscale opacity-60 hover:opacity-100 hover:grayscale-0"
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIsEditStatusDropdownOpen(!isEditStatusDropdownOpen)
+                        }
+                        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                      >
+                        <span className="text-primary truncate">
+                          {editFormData.leadType || "Select Status"}
+                        </span>
+                        <ChevronDown
+                          size={16}
+                          className={`text-slate-400 transition-transform ${
+                            isEditStatusDropdownOpen ? "rotate-180" : ""
                           }`}
-                        >
-                          {type === "Hot" ? (
-                            <Flame size={18} strokeWidth={2.5} />
-                          ) : type === "Warm" ? (
-                            <Sun size={18} strokeWidth={2.5} />
-                          ) : (
-                            <Snowflake size={18} strokeWidth={2.5} />
-                          )}
-                          <span className="text-[10px] font-bold  tracking-widest">
-                            {type}
-                          </span>
-                        </button>
-                      ))}
+                        />
+                      </button>
+
+                      {isEditStatusDropdownOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-[80]"
+                            onClick={() => setIsEditStatusDropdownOpen(false)}
+                          />
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                            <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                              <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                                Select Status
+                              </p>
+                            </div>
+                            {["Hot", "Warm", "Cold", "Converted"].map((status) => (
+                              <button
+                                key={status}
+                                type="button"
+                                onClick={() => {
+                                  setEditFormData({ ...editFormData, leadType: status });
+                                  setIsEditStatusDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                  editFormData.leadType === status
+                                    ? "bg-slate-100 text-secondary"
+                                    : "text-[#18254D] hover:bg-slate-50"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {status === "Hot" && <Flame size={12} className="text-error" />}
+                                  {status === "Warm" && <Sun size={12} className="text-warning" />}
+                                  {status === "Cold" && <Snowflake size={12} className="text-info" />}
+                                  {status === "Converted" && <UserCheck size={12} className="text-success" />}
+                                  <span>{status}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -775,7 +838,7 @@ const ClientDetail = ({
                       {client.phone}
                     </span>
                   </div>
-                  {(client.state || client.country) && (
+                  {!isLead && (client.state || client.country) && (
                     <div className="flex items-center gap-4 p-3.5 bg-white rounded-xl border border-slate-100 shadow-sm group">
                       <MapPin size={14} className="text-slate-400 shrink-0" />
                       <span className="text-xs font-bold text-primary truncate">
@@ -947,7 +1010,8 @@ const ClientDetail = ({
                                     {project.name}
                                   </h4>
                                   <p className="text-[9px] font-bold text-slate-400  tracking-widest">
-                                    {project.status} • {project.progress}% Complete
+                                    {project.status} • {project.progress}%
+                                    Complete
                                   </p>
                                 </div>
                                 <button

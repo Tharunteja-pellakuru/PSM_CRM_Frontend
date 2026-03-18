@@ -152,9 +152,12 @@ const LeadList = ({
     useState(false);
   const [isOnboardPriorityDropdownOpen, setIsOnboardPriorityDropdownOpen] =
     useState(false);
+  const [isOnboardClientStatusDropdownOpen, setIsOnboardClientStatusDropdownOpen] =
+    useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [followUpLeadId, setFollowUpLeadId] = useState(null);
-  const [followUpLeadName, setFollowUpLeadName] = useState("");
+  const [isAddStatusDropdownOpen, setIsAddStatusDropdownOpen] = useState(false);
+  const [isAddCategoryDropdownOpen, setIsAddCategoryDropdownOpen] = useState(false);
   const [followUpData, setFollowUpData] = useState({
     type: "call",
     description: "",
@@ -169,7 +172,7 @@ const LeadList = ({
     clientType: "New",
     status: "Active",
     projectName: "",
-    projectStatus: "Planning",
+    projectStatus: "In Progress",
     projectCategory: 1,
     projectPriority: "High",
     projectDescription: "",
@@ -216,7 +219,7 @@ const LeadList = ({
           clientType: "New",
           status: "Active",
           projectName: "",
-          projectStatus: "Planning",
+          projectStatus: "In Progress",
           projectCategory: 1,
           projectPriority: "Medium",
           projectDescription: "",
@@ -1218,66 +1221,124 @@ const LeadList = ({
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 uppercase">
                     LEAD CATEGORY
                   </label>
-                  <div className="flex gap-2">
-                    {[1, 2, 3].map((catId) => (
-                      <button
-                        key={catId}
-                        type="button"
-                        onClick={() =>
-                          setFormData({ ...formData, projectCategory: catId })
-                        }
-                        className={`flex-1 flex items-center justify-center p-2.5 border-2 rounded-xl transition-all font-bold  text-[10px] tracking-widest ${
-                          formData.projectCategory === catId
-                            ? "border-primary bg-primary/5 text-primary shadow-sm"
-                            : "border-slate-100 text-slate-400 hover:border-slate-200"
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsAddCategoryDropdownOpen(!isAddCategoryDropdownOpen)
+                      }
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                    >
+                      <span className="text-primary truncate">
+                        {CATEGORY_MAP[formData.projectCategory] || "Select Category"}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${
+                          isAddCategoryDropdownOpen ? "rotate-180" : ""
                         }`}
-                      >
-                        {CATEGORY_MAP[catId]}
-                      </button>
-                    ))}
+                      />
+                    </button>
+
+                    {isAddCategoryDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setIsAddCategoryDropdownOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                          <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                            <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                              Select Category
+                            </p>
+                          </div>
+                          {[1, 2, 3].map((catId) => (
+                            <button
+                              key={catId}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, projectCategory: catId });
+                                setIsAddCategoryDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                formData.projectCategory === catId
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
+                            >
+                              {CATEGORY_MAP[catId]}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 uppercase">
                     LEAD STATUS
                   </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {["Hot", "Warm", "Cold"].map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() =>
-                          setFormData({
-                            ...formData,
-                            leadType: type,
-                          })
-                        }
-                        className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl border-2 transition-all ${
-                          formData.leadType === type
-                            ? type === "Hot"
-                              ? "bg-error/5 border-error text-error shadow-lg shadow-error/10 scale-[1.02]"
-                              : type === "Warm"
-                                ? "bg-warning/5 border-warning text-warning shadow-lg shadow-warning/10 scale-[1.02]"
-                                : "bg-info/5 border-info text-info shadow-lg shadow-info/10 scale-[1.02]"
-                            : "bg-slate-50 border-slate-100 text-slate-400 grayscale opacity-60 hover:opacity-100 hover:grayscale-0"
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsAddStatusDropdownOpen(!isAddStatusDropdownOpen)
+                      }
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                    >
+                      <span className="text-primary truncate">
+                        {formData.leadType || "Select Status"}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${
+                          isAddStatusDropdownOpen ? "rotate-180" : ""
                         }`}
-                      >
-                        {type === "Hot" ? (
-                          <Flame size={14} strokeWidth={2.5} />
-                        ) : type === "Warm" ? (
-                          <Sun size={14} strokeWidth={2.5} />
-                        ) : (
-                          <Snowflake size={14} strokeWidth={2.5} />
-                        )}
-                        <span className="text-[8px] font-bold  tracking-widest">
-                          {type}
-                        </span>
-                      </button>
-                    ))}
+                      />
+                    </button>
+
+                    {isAddStatusDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setIsAddStatusDropdownOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                          <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                            <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                              Select Status
+                            </p>
+                          </div>
+                          {["Hot", "Warm", "Cold", "Converted"].map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, leadType: status });
+                                setIsAddStatusDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                formData.leadType === status
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {status === "Hot" && <Flame size={12} className="text-error" />}
+                                {status === "Warm" && <Sun size={12} className="text-warning" />}
+                                {status === "Cold" && <Snowflake size={12} className="text-info" />}
+                                {status === "Converted" && <UserCheck size={12} className="text-success" />}
+                                <span>{status}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1528,19 +1589,65 @@ const LeadList = ({
                   <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 uppercase">
                     CLIENT STATUS
                   </label>
-                  <select
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-bold"
-                    value={onboardingData.clientStatus}
-                    onChange={(e) =>
-                      setOnboardingData({
-                        ...onboardingData,
-                        clientStatus: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsOnboardClientStatusDropdownOpen(
+                          !isOnboardClientStatusDropdownOpen,
+                        )
+                      }
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                    >
+                      <span className="text-primary truncate">
+                        {onboardingData.clientStatus}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${
+                          isOnboardClientStatusDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isOnboardClientStatusDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() =>
+                            setIsOnboardClientStatusDropdownOpen(false)
+                          }
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                          <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                            <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                              Select Status
+                            </p>
+                          </div>
+                          {["Active", "Inactive"].map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => {
+                                setOnboardingData({
+                                  ...onboardingData,
+                                  clientStatus: status,
+                                });
+                                setIsOnboardClientStatusDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                onboardingData.clientStatus === status
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
+                            >
+                              {status}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1567,6 +1674,24 @@ const LeadList = ({
                       setOnboardingData({
                         ...onboardingData,
                         projectName: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                    PROJECT DESCRIPTION
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Focus on UI/UX redesign and performance optimization..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium resize-none shadow-sm"
+                    value={onboardingData.projectDescription}
+                    onChange={(e) =>
+                      setOnboardingData({
+                        ...onboardingData,
+                        projectDescription: e.target.value,
                       })
                     }
                   />
@@ -1636,10 +1761,7 @@ const LeadList = ({
                               Select Status
                             </p>
                           </div>
-                          {(onboardingData.projectCategory === 1 // Changed to numeric ID
-                            ? ["Planning", "In Progress", "Testing", "Live"]
-                            : ["Planning", "In Progress", "Completed"]
-                          ).map((status) => (
+                          {["Hold", "In Progress", "Completed"].map((status) => (
                             <button
                               key={status}
                               type="button"
@@ -1731,34 +1853,16 @@ const LeadList = ({
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
-                    PROJECT DESCRIPTION
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="e.g. Focus on UI/UX redesign and performance optimization..."
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium resize-none shadow-sm"
-                    value={onboardingData.projectDescription}
-                    onChange={(e) =>
-                      setOnboardingData({
-                        ...onboardingData,
-                        projectDescription: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 flex items-center gap-1.5">
-                    PROJECT BUDGET (INR)
+                    PROJECT BUDGET ({onboardingData.currency === "USD" ? "USD" : "INR"})
                   </label>
                   <div className="relative">
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                      ₹
+                      {onboardingData.currency === "USD" ? "$" : "₹"}
                     </div>
                     <input
                       type="text"
-                      placeholder="e.g. 5,00,000"
+                      placeholder={onboardingData.currency === "USD" ? "e.g. 5,000" : "e.g. 5,00,000"}
                       className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium shadow-sm"
                       value={onboardingData.projectBudget}
                       onChange={(e) =>

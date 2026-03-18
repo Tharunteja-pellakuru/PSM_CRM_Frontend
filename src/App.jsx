@@ -167,6 +167,7 @@ function AppRoutes() {
           email: lead.email || "",
           phone: lead.phone_number || "",
           status: lead.lead_status === "Dismissed" ? "Dismissed" : "Lead",
+          isConverted: lead.lead_status === "Converted",
           leadType: lead.lead_status || "Warm",
           projectCategory: lead.lead_category || 1,
           industry: lead.lead_category || 1,
@@ -231,12 +232,16 @@ function AppRoutes() {
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         const transformedClients = data.map((c) => ({
-          id: c.client_id.toString(),
-          name: c.client_name,
+          id: c.id?.toString() || c.client_id?.toString(),
+          name: c.name || c.client_name,
           company: c.organisation_name,
-          email: "", // Not in table yet, add if needed
-          phone: "", // Not in table yet, add if needed
-          status: c.client_status || "Active",
+          email: c.email || "", 
+          phone: c.phone || "",
+          status: c.status || c.client_status || "Active",
+          projectCategory: c.projectCategory || 1,
+          briefMessage: c.brief_message || "",
+          notes: c.brief_message || "",
+          website: c.website || "",
           country: c.client_country,
           state: c.client_state,
           currency: c.client_currency,
@@ -380,6 +385,7 @@ function AppRoutes() {
             email: result.lead?.email || data.email,
             phone: result.lead?.phone_number || data.phone,
             status: "Lead",
+            isConverted: result.lead?.lead_status === "Converted",
             leadType: result.lead?.lead_status || data.leadType || "Warm",
             projectCategory:
               result.lead?.lead_category || data.projectCategory || 1,
@@ -547,11 +553,11 @@ function AppRoutes() {
       if (newProject) {
         setProjects((prev) => [{
           id: newProject.project_id.toString(),
-          projectName: newProject.project_name,
-          projectDescription: newProject.project_description,
-          projectStatus: newProject.project_status,
-          projectCategory: newProject.project_category,
-          projectPriority: newProject.project_priority,
+          name: newProject.project_name,
+          description: newProject.project_description,
+          status: newProject.project_status,
+          category: newProject.project_category,
+          priority: newProject.project_priority,
           budget: newProject.project_budget,
           onboardingDate: newProject.onboarding_date,
           deadline: newProject.deadline_date,
@@ -563,9 +569,7 @@ function AppRoutes() {
       // Update leads state to mark as converted
       setLeads((prev) =>
         prev.map((c) =>
-          c.id == id
-            ? { ...c, isConverted: true }
-            : c,
+          c.id == id ? { ...c, isConverted: true, leadType: "Converted" } : c,
         ),
       );
 
@@ -742,6 +746,10 @@ function AppRoutes() {
           editData.leadType !== undefined && editData.leadType !== null
             ? editData.leadType
             : leadToUpdate.leadType,
+        isConverted:
+          editData.leadType !== undefined
+            ? editData.leadType === "Converted"
+            : leadToUpdate.isConverted,
         projectCategory:
           editData.projectCategory !== undefined &&
           editData.projectCategory !== null
@@ -815,6 +823,7 @@ function AppRoutes() {
         lastContact: updatedLead.lead?.updated_at
           ? updatedLead.lead.updated_at.split("T")[0]
           : optimisticLead.lastContact,
+        isConverted: updatedLead.lead?.lead_status === "Converted", // Set isConverted based on API response
       };
 
       setLeads((prev) => prev.map((l) => (l.id == id ? finalLead : l)));
@@ -1004,26 +1013,31 @@ function AppRoutes() {
   }
 
   // Enquiry handlers
-  function handlePromoteEnquiry(enquiry, type) {
-    const newClient = {
-      id: `c-${Date.now()}`,
-      name: enquiry.name,
-      company: enquiry.website
-        ? enquiry.website.replace(/^https?:\/\//, "").split("/")[0]
+  function handlePromoteEnquiry(promotedData, enquiryId) {
+    const newLead = {
+      id: `l-${Date.now()}`,
+      name: promotedData.full_name || promotedData.name,
+      company: promotedData.website_url
+        ? promotedData.website_url.replace(/^https?:\/\//, "").split("/")[0]
         : "",
-      email: enquiry.email,
-      phone: enquiry.phone,
+      email: promotedData.email,
+      phone: promotedData.phone_number || promotedData.phone,
       status: "Lead",
-      leadType: type,
-      avatar: `https://picsum.photos/100/100?random=${clients.length + 10}`,
+      leadType: promotedData.lead_status || "Warm",
+      isConverted: promotedData.lead_status === "Converted",
+      avatar: `https://picsum.photos/100/100?random=${leads.length + 10}`,
       joinedDate: new Date().toISOString().split("T")[0],
       lastContact: new Date().toISOString().split("T")[0],
-      industry: 1,
-      notes: enquiry.message,
-      website: enquiry.website,
+      industry: promotedData.lead_category || 2,
+      country: promotedData.country || "",
+      notes: promotedData.message || promotedData.notes,
+      website: promotedData.website_url || promotedData.website,
     };
-    setClients([newClient, ...clients]);
-    setEnquiries((prev) => prev.filter((e) => e.id != enquiry.id));
+    setLeads([newLead, ...leads]);
+    setClients([newLead, ...clients]);
+    setEnquiries((prev) =>
+      prev.filter((e) => e.uuid != enquiryId && e.id != enquiryId),
+    );
     navigate("/leads");
   }
 

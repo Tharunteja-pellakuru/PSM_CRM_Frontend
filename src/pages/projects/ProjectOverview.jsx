@@ -18,9 +18,15 @@ import {
   Phone,
   Monitor,
   MessageSquare,
+  Eye,
+  Download,
 } from "lucide-react";
 import DatePicker from "../../components/ui/DatePicker";
-import { CATEGORY_MAP, REVERSE_CATEGORY_MAP } from "../../constants/categoryConstants";
+import {
+  CATEGORY_MAP,
+  REVERSE_CATEGORY_MAP,
+} from "../../constants/categoryConstants";
+import { BASE_URL } from "../../constants/config";
 
 const ProjectOverview = ({
   project,
@@ -168,10 +174,11 @@ const ProjectOverview = ({
                   setFormData({ ...formData, [field]: opt });
                   setActiveDropdown(null);
                 }}
-                className={`w-full text-left px-5 py-3 text-[10px] font-bold  tracking-widest transition-colors ${value === opt
+                className={`w-full text-left px-5 py-3 text-[10px] font-bold  tracking-widest transition-colors ${
+                  value === opt
                     ? "bg-slate-50 text-secondary"
                     : "text-[#18254D] hover:bg-slate-50"
-                  }`}
+                }`}
               >
                 {CATEGORY_MAP[opt] || opt}
               </button>
@@ -185,13 +192,13 @@ const ProjectOverview = ({
   return (
     <div className="w-full h-full relative space-y-6">
       {/* Page Title & Tagline */}
-      <div className="mb-2 animate-fade-in px-1">
-        <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-primary tracking-tight mb-2">
+      <div className="max-w-2xl">
+        <h2 className="text-lg md:text-xl lg:text-2xl font-bold text-primary tracking-tight mb-2">
           Project Overview
-        </h1>
-        <p className="text-slate-500 text-xs md:text-sm leading-relaxed">
-          Detailed insights into project milestones, financials, and client
-          communication.
+        </h2>
+        <p className="text-sm text-textMuted font-medium leading-relaxed">
+          Get a complete overview of all your projects, including progress,
+          timelines, and current status.
         </p>
       </div>
 
@@ -245,70 +252,6 @@ const ProjectOverview = ({
         {/* Main Section */}
         <div className="lg:col-span-2 space-y-5">
           {/* Overview & Progress */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-fade-in-up">
-            <div className="bg-slate-50/50 px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#18254D]  tracking-widest flex items-center gap-3">
-                <FileText size={18} className="text-secondary" />
-                Progress
-              </h3>
-              <div className="flex items-center gap-2">
-                <Clock size={14} className="text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-400  tracking-widest">
-                  Updated {new Date().toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-5 space-y-6">
-              {/* Progress */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-primary  tracking-widest opacity-40">
-                      Delivery Progress
-                    </label>
-                    <p className="text-2xl font-bold text-secondary tracking-tight leading-none">
-                      {formData.progress}%
-                    </p>
-                  </div>
-                  {isEditing && (
-                    <div className="text-right">
-                      <span className="text-[10px] font-bold text-slate-400  tracking-widest">
-                        Manual adjustment
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative pt-2">
-                  {isEditing ? (
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={formData.progress}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          progress: parseInt(e.target.value),
-                        })
-                      }
-                      className="w-full h-3 bg-slate-100 rounded-full appearance-none cursor-pointer accent-secondary border border-slate-200"
-                    />
-                  ) : (
-                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-50">
-                      <div
-                        className="h-full bg-secondary rounded-full shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-all duration-1000 ease-out relative"
-                        style={{ width: `${formData.progress}%` }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Configuration Grid */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm animate-fade-in">
@@ -320,7 +263,7 @@ const ProjectOverview = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <label className="text-[10px] font-bold text-primary  tracking-widest ml-1 opacity-50">
                   Project Name
                 </label>
@@ -338,7 +281,7 @@ const ProjectOverview = ({
                     {formData.name}
                   </div>
                 )}
-              </div>
+              </div> */}
 
               {isEditing ? (
                 <CustomDropdown
@@ -409,7 +352,9 @@ const ProjectOverview = ({
                   </label>
                   <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-[#18254D]">
                     <Tag size={16} className="text-secondary" />
-                    <span>{CATEGORY_MAP[formData.category] || formData.category}</span>
+                    <span>
+                      {CATEGORY_MAP[formData.category] || formData.category}
+                    </span>
                     <span
                       className={`ml-auto px-2 py-0.5 text-[8px] border rounded-md ${getCategoryColor(formData.category)}`}
                     >
@@ -462,14 +407,35 @@ const ProjectOverview = ({
                       Project Scope Document
                     </p>
                     <p className="text-[10px] font-bold text-slate-400  tracking-widest">
-                      PDF - 2.4 MB
+                      {project?.scopeDocument
+                        ? project.scopeDocument
+                        : "No document uploaded"}
                     </p>
                   </div>
                 </div>
-                <button className="px-4 py-2 bg-white border border-slate-200 text-[#18254D] rounded-lg text-[10px] font-bold  tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2">
-                  <Monitor size={14} />
-                  View Only
-                </button>
+                {project?.scopeDocument && (
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`${BASE_URL}/uploads/${project.scopeDocument}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-white border border-slate-200 text-[#18254D] rounded-lg text-[10px] font-bold tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+                      title="View Document"
+                    >
+                      <Eye size={14} className="text-secondary" />
+                      View
+                    </a>
+                    <a
+                      href={`${BASE_URL}/uploads/${project.scopeDocument}`}
+                      download={project.scopeDocument}
+                      className="px-3 py-2 bg-white border border-slate-200 text-[#18254D] rounded-lg text-[10px] font-bold tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+                      title="Download Document"
+                    >
+                      <Download size={14} className="text-secondary" />
+                      Download
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -484,7 +450,7 @@ const ProjectOverview = ({
             </div>
             <div className="p-5 space-y-4">
               {followUps?.filter((f) => f.projectId === project.id).length >
-                0 ? (
+              0 ? (
                 followUps
                   .filter((f) => f.projectId === project.id)
                   .map((f) => (
@@ -512,10 +478,11 @@ const ProjectOverview = ({
                         </p>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2 py-0.5 text-[8px] font-bold  tracking-widest rounded-md border ${f.status === "completed"
+                            className={`px-2 py-0.5 text-[8px] font-bold  tracking-widest rounded-md border ${
+                              f.status === "completed"
                                 ? "bg-success/10 text-success border-success/20"
                                 : "bg-warning/10 text-warning border-warning/20"
-                              }`}
+                            }`}
                           >
                             {f.status}
                           </span>
@@ -616,10 +583,10 @@ const ProjectOverview = ({
                   <p className="text-base font-bold tracking-tight leading-none">
                     {formData.deadline
                       ? new Date(formData.deadline).toLocaleDateString([], {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
                       : "No deadline set"}
                   </p>
                 )}
@@ -629,19 +596,16 @@ const ProjectOverview = ({
 
           {/* Client Card */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm animate-slide-up">
-            <h3 className="text-[10px] font-bold text-slate-400  tracking-widest mb-5 border-b border-slate-50 pb-3">
+            <h3 className="text-[10px] font-bold text-slate-400  tracking-widest mb- border-b border-slate-50 pb-3">
               Client Details
             </h3>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center font-bold text-lg border-4 border-slate-50 shadow-md">
-                {client?.company?.charAt(0) || "C"}
+                {client?.name?.charAt(0) || "C"}
               </div>
               <div>
-                <p className="text-sm font-bold text-primary leading-tight">
-                  {client?.company || "Independent"}
-                </p>
                 <p className="text-[10px] font-bold text-slate-400  tracking-widest mt-0.5">
-                  {client?.name || "Direct Client"}
+                  {client?.name || ""}
                 </p>
               </div>
             </div>

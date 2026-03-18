@@ -30,6 +30,7 @@ import mistralLogo from "../../assets/mistral_logo.png";
 import deepseekLogo from "../../assets/deepseek_logo.png";
 import llamaLogo from "../../assets/llama_logo.png";
 import groqLogo from "../../assets/groq_logo.png";
+import { CATEGORY_MAP } from "../../constants/categoryConstants";
 
 const Settings = ({
   aiModels = [],
@@ -1422,7 +1423,11 @@ const Settings = ({
                         label="Privileges"
                         value={newAdmin.privileges}
                         field="add_admin_privileges"
-                        options={["Tech", "Social Media", "Both"]}
+                        options={[
+                          { value: 1, label: "Tech" },
+                          { value: 2, label: "Social Media" },
+                          { value: 3, label: "Both" },
+                        ]}
                         onChange={(val) =>
                           setNewAdmin({ ...newAdmin, privileges: val })
                         }
@@ -1543,7 +1548,11 @@ const Settings = ({
                                     label="Privileges"
                                     value={editAdminData.privileges}
                                     field={`edit_admin_privileges_${admin.id}`}
-                                    options={["Tech", "Social Media", "Both"]}
+                                    options={[
+                                      { value: 1, label: "Tech" },
+                                      { value: 2, label: "Social Media" },
+                                      { value: 3, label: "Both" },
+                                    ]}
                                     onChange={(val) =>
                                       setEditAdminData({
                                         ...editAdminData,
@@ -1609,7 +1618,7 @@ const Settings = ({
                                     {admin.status}
                                   </span>
                                   <span className="inline-block px-3 py-1 bg-blue-100/50 border border-blue-200 text-blue-700 rounded-lg text-[10px] font-bold  tracking-widest">
-                                    {admin.privileges || "Both"}
+                                    {CATEGORY_MAP[admin.privileges] || "Both"}
                                   </span>
                                 </div>
                               </>

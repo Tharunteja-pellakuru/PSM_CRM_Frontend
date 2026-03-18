@@ -27,13 +27,18 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  UserCheck,
 } from "lucide-react";
 import DatePicker from "../../components/ui/DatePicker";
 import { CATEGORY_MAP, REVERSE_CATEGORY_MAP } from "../../constants/categoryConstants";
+import { countries } from "../../utils/countries";
+import SearchableDropdown from "../../components/common/SearchableDropdown";
 import {
   analyzeEnquiryRelevance,
   batchAnalyzeEnquiries,
 } from "../../services/aiService";
+import { BASE_URL } from "../../constants/config";
+import { getAuthHeaders } from "../../utils/auth";
 
 const EnquiryList = ({
   enquiries,
@@ -108,9 +113,12 @@ const EnquiryList = ({
     website: "",
     leadType: "Hot",
     leadCategory: 2,
+    country: "India",
     notes: "",
   });
   const [showSimulateForm, setShowSimulateForm] = useState(false);
+  const [isEnquiryStatusDropdownOpen, setIsEnquiryStatusDropdownOpen] = useState(false);
+  const [isEnquiryCategoryDropdownOpen, setIsEnquiryCategoryDropdownOpen] = useState(false);
   const [holdModalOpen, setHoldModalOpen] = useState(false);
   const [holdReason, setHoldReason] = useState("");
   const [formData, setFormData] = useState({
@@ -331,6 +339,7 @@ const EnquiryList = ({
       website: enquiry.website,
       leadType: "Warm",
       leadCategory: 2,
+      country: enquiry.country || "India",
       notes: enquiry.message,
     });
     setLeadModalOpen(true);
@@ -346,15 +355,17 @@ const EnquiryList = ({
         website_url: promoteFormData.website,
         lead_category: promoteFormData.leadCategory,
         lead_status: promoteFormData.leadType,
+        country: promoteFormData.country,
         message: promoteFormData.notes,
       };
 
       console.log(updatedEnquiry);
 
-      const res = await fetch("/api/add-lead", {
+      const res = await fetch(`${BASE_URL}/api/add-lead`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...getAuthHeaders(),
         },
         body: JSON.stringify(updatedEnquiry),
       });
@@ -1043,7 +1054,20 @@ const EnquiryList = ({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
+                  <SearchableDropdown
+                    label="Country Code"
+                    options={countries.map(c => ({
+                      name: `${c.name} (${c.code})`,
+                      code: c.code,
+                      id: c.name // Using country name as ID/Value
+                    }))}
+                    value={promoteFormData.country}
+                    onChange={(val) => setPromoteFormData({ ...promoteFormData, country: val })}
+                    placeholder="Search country..."
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-primary  tracking-widest ml-1 uppercase">
                     Phone Number
                   </label>
                   <input
@@ -1058,8 +1082,8 @@ const EnquiryList = ({
                     }
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[9px] font-bold text-primary  tracking-widest ml-1 uppercase">
                     Website URL (Optional)
                   </label>
                   <input
@@ -1076,72 +1100,127 @@ const EnquiryList = ({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
-                  Lead Category
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                      {["Tech", "Social Media"].map((cat) => (
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-primary  tracking-widest ml-1 uppercase">
+                    Lead Category
+                  </label>
+                  <div className="relative">
                     <button
-                      key={cat}
                       type="button"
                       onClick={() =>
-                        setPromoteFormData({
-                          ...promoteFormData,
-                          leadCategory: cat,
-                        })
+                        setIsEnquiryCategoryDropdownOpen(!isEnquiryCategoryDropdownOpen)
                       }
-                      className={`flex items-center justify-center py-2.5 rounded-2xl border-2 transition-all font-bold  text-[10px] tracking-widest ${
-                        promoteFormData.leadCategory === cat
-                          ? "border-primary bg-primary/5 text-primary shadow-sm"
-                          : "border-slate-100 text-slate-400 hover:border-slate-200"
-                      }`}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
                     >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
-                  Lead Status
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {["Hot", "Warm", "Cold"].map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() =>
-                        setPromoteFormData({
-                          ...promoteFormData,
-                          leadType: type,
-                        })
-                      }
-                      className={`flex flex-col items-center justify-center gap-1 py-2 rounded-xl border-2 transition-all ${
-                        promoteFormData.leadType === type
-                          ? type === "Hot"
-                            ? "bg-error/5 border-error text-error shadow-md shadow-error/10 scale-[1.03]"
-                            : type === "Warm"
-                              ? "bg-warning/5 border-warning text-warning shadow-md shadow-warning/10 scale-[1.03]"
-                              : "bg-info/5 border-info text-info shadow-md shadow-info/10 scale-[1.03]"
-                          : "bg-slate-50 border-slate-100 text-slate-400 grayscale opacity-60 hover:opacity-100 hover:grayscale-0"
-                      }`}
-                    >
-                      {type === "Hot" ? (
-                        <Flame size={14} strokeWidth={2.5} />
-                      ) : type === "Warm" ? (
-                        <Sun size={14} strokeWidth={2.5} />
-                      ) : (
-                        <Snowflake size={14} strokeWidth={2.5} />
-                      )}
-                      <span className="text-[8px] font-bold  tracking-widest">
-                        {type}
+                      <span className="text-primary truncate">
+                        {CATEGORY_MAP[promoteFormData.leadCategory] || "Select Category"}
                       </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${
+                          isEnquiryCategoryDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
-                  ))}
+
+                    {isEnquiryCategoryDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setIsEnquiryCategoryDropdownOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                          <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                            <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                              Select Category
+                            </p>
+                          </div>
+                          {[1, 2, 3].map((catId) => (
+                            <button
+                              key={catId}
+                              type="button"
+                              onClick={() => {
+                                setPromoteFormData({ ...promoteFormData, leadCategory: catId });
+                                setIsEnquiryCategoryDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                promoteFormData.leadCategory === catId
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
+                            >
+                              {CATEGORY_MAP[catId]}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-primary  tracking-widest ml-1 uppercase">
+                    Lead Status
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsEnquiryStatusDropdownOpen(!isEnquiryStatusDropdownOpen)
+                      }
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                    >
+                      <span className="text-primary truncate">
+                        {promoteFormData.leadType || "Select Status"}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${
+                          isEnquiryStatusDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isEnquiryStatusDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setIsEnquiryStatusDropdownOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                          <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                            <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                              Select Status
+                            </p>
+                          </div>
+                          {["Hot", "Warm", "Cold"].map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => {
+                                setPromoteFormData({ ...promoteFormData, leadType: status });
+                                setIsEnquiryStatusDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                promoteFormData.leadType === status
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {status === "Hot" && <Flame size={12} className="text-error" />}
+                                {status === "Warm" && <Sun size={12} className="text-warning" />}
+                                {status === "Cold" && <Snowflake size={12} className="text-info" />}
+                                {status === "Converted" && <UserCheck size={12} className="text-success" />}
+                                <span>{status}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
 
               <div className="space-y-1.5">
                 <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
