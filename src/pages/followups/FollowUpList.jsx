@@ -55,6 +55,11 @@ const FollowUpList = ({
     timeHour: "12",
     timeMinute: "00",
     timePeriod: "PM",
+    completed_by: "",
+    completionDate: new Date().toISOString().split("T")[0],
+    completionHour: "12",
+    completionMinute: "00",
+    completionPeriod: "PM",
   });
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -170,12 +175,19 @@ const FollowUpList = ({
     // Combine date and time
     const combinedDateTime = new Date(`${formData.followup_date}T${time24}`).toISOString();
     
+    let compHour = parseInt(formData.completionHour || "12");
+    if (formData.completionPeriod === "PM" && compHour < 12) compHour += 12;
+    if (formData.completionPeriod === "AM" && compHour === 12) compHour = 0;
+    const compTime24 = `${compHour.toString().padStart(2, "0")}:${formData.completionMinute || "00"}`;
+    const combinedCompletionStr = new Date(`${formData.completionDate || new Date().toISOString().split("T")[0]}T${compTime24}`).toISOString();
+
     if (formData.id) {
       onEditFollowUp &&
         onEditFollowUp({
           ...formData,
           dueDate: combinedDateTime,
           followup_date: combinedDateTime, // Sending combined for backend
+          completed_at: combinedCompletionStr,
         });
     } else {
       onAddFollowUp({
@@ -197,6 +209,11 @@ const FollowUpList = ({
       timeHour: "12",
       timeMinute: "00",
       timePeriod: "PM",
+      completed_by: "",
+      completionDate: new Date().toISOString().split("T")[0],
+      completionHour: "12",
+      completionMinute: "00",
+      completionPeriod: "PM",
     });
   };
 
@@ -450,6 +467,21 @@ const FollowUpList = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        let compDate = new Date().toISOString().split("T")[0];
+                        let compHr = "12";
+                        let compMin = "00";
+                        let compPrd = "PM";
+
+                        if (f.status === "completed" && f.completed_at) {
+                          const cd = new Date(f.completed_at);
+                          if (!isNaN(cd.getTime())) {
+                            compDate = cd.toISOString().split("T")[0];
+                            compHr = (cd.getHours() % 12 || 12).toString();
+                            compMin = cd.getMinutes().toString().padStart(2, "0");
+                            compPrd = cd.getHours() >= 12 ? "PM" : "AM";
+                          }
+                        }
+
                         setFormData({
                           ...f,
                           followup_status: f.status || f.followup_status || "pending",
@@ -466,6 +498,11 @@ const FollowUpList = ({
                           timePeriod: f.dueDate 
                             ? (new Date(f.dueDate).getHours() >= 12 ? "PM" : "AM") 
                             : "PM",
+                          completed_by: f.completed_by || "",
+                          completionDate: compDate,
+                          completionHour: compHr,
+                          completionMinute: compMin,
+                          completionPeriod: compPrd,
                         });
                         setShowAddModal(true);
                       }}
@@ -1075,6 +1112,163 @@ const FollowUpList = ({
                     </div>
                   </div>
 
+                  {formData.followup_status === "completed" && (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-bold text-primary tracking-widest ml-1">
+                          Follow Conclusion Brief
+                        </label>
+                        <textarea
+                          placeholder="Update the conclusion brief..."
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium shadow-sm focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none resize-none"
+                          value={formData.follow_brief || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              follow_brief: e.target.value,
+                            })
+                          }
+                          rows="3"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[9px] font-bold text-primary tracking-widest ml-1">
+                          Completed By
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. John Doe"
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium shadow-sm focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none"
+                          value={formData.completed_by || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              completed_by: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-bold text-primary tracking-widest ml-1">
+                            Completion Date
+                          </label>
+                          <DatePicker
+                            value={formData.completionDate}
+                            onChange={(val) =>
+                              setFormData({ ...formData, completionDate: val })
+                            }
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-bold text-primary tracking-widest ml-1">
+                            Completion Time
+                          </label>
+                          <div className="flex gap-2 relative">
+                            {/* Hour Dropdown */}
+                            <div className="flex-1 relative">
+                              <button
+                                type="button"
+                                onClick={() => setIsCompHourOpen(!isCompHourOpen)}
+                                className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                              >
+                                <span>{formData.completionHour.padStart(2, '0')}</span>
+                                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isCompHourOpen ? "rotate-180" : ""}`} />
+                              </button>
+                              {isCompHourOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-[80]" onClick={() => setIsCompHourOpen(false)} />
+                                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-y-auto max-h-48 z-[90] animate-fade-in-up origin-top">
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                                      <button
+                                        key={h}
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData({ ...formData, completionHour: h.toString() });
+                                          setIsCompHourOpen(false);
+                                        }}
+                                        className={`w-full text-left px-4 py-2 text-[10px] font-bold tracking-widest transition-colors ${formData.completionHour === h.toString() ? "bg-slate-100 text-secondary" : "text-[#18254D] hover:bg-slate-50"}`}
+                                      >
+                                        {h.toString().padStart(2, '0')}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Minute Dropdown */}
+                            <div className="flex-1 relative">
+                              <button
+                                type="button"
+                                onClick={() => setIsCompMinOpen(!isCompMinOpen)}
+                                className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                              >
+                                <span>{formData.completionMinute}</span>
+                                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isCompMinOpen ? "rotate-180" : ""}`} />
+                              </button>
+                              {isCompMinOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-[80]" onClick={() => setIsCompMinOpen(false)} />
+                                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-y-auto max-h-48 z-[90] animate-fade-in-up origin-top">
+                                    {Array.from({ length: 60 }, (_, i) => i).map(m => (
+                                      <button
+                                        key={m}
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData({ ...formData, completionMinute: m.toString().padStart(2, '0') });
+                                          setIsCompMinOpen(false);
+                                        }}
+                                        className={`w-full text-left px-4 py-2 text-[10px] font-bold tracking-widest transition-colors ${formData.completionMinute === m.toString().padStart(2, '0') ? "bg-slate-100 text-secondary" : "text-[#18254D] hover:bg-slate-50"}`}
+                                      >
+                                        {m.toString().padStart(2, '0')}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Period Dropdown */}
+                            <div className="w-20 relative">
+                              <button
+                                type="button"
+                                onClick={() => setIsCompPeriodOpen(!isCompPeriodOpen)}
+                                className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                              >
+                                <span>{formData.completionPeriod}</span>
+                                <ChevronDown size={14} className={`text-slate-400 transition-transform ${isCompPeriodOpen ? "rotate-180" : ""}`} />
+                              </button>
+                              {isCompPeriodOpen && (
+                                <>
+                                  <div className="fixed inset-0 z-[80]" onClick={() => setIsCompPeriodOpen(false)} />
+                                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top">
+                                    {["AM", "PM"].map(p => (
+                                      <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData({ ...formData, completionPeriod: p });
+                                          setIsCompPeriodOpen(false);
+                                        }}
+                                        className={`w-full text-left px-4 py-2.5 text-[10px] font-bold tracking-widest transition-colors ${formData.completionPeriod === p ? "bg-slate-100 text-secondary" : "text-[#18254D] hover:bg-slate-50"}`}
+                                      >
+                                        {p}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   <div className="space-y-1.5">
                     <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
                       Follow-up Status
@@ -1110,6 +1304,7 @@ const FollowUpList = ({
                             </div>
                             {[
                               "pending",
+                              "completed",
                               "reschedule",
                               "cancelled",
                             ].map((status) => (
@@ -1117,9 +1312,28 @@ const FollowUpList = ({
                                 key={status}
                                 type="button"
                                 onClick={() => {
+                                  const updates = { followup_status: status };
+                                  
+                                  // If switching TO completed, and it's currently empty, pre-fill with defaults
+                                  if (status === "completed") {
+                                    if (!formData.completed_by) {
+                                      const user = JSON.parse(localStorage.getItem("user") || "{}");
+                                      updates.completed_by = user.full_name || "";
+                                    }
+                                    if (!formData.completionDate) {
+                                      updates.completionDate = new Date().toISOString().split("T")[0];
+                                    }
+                                    if (!formData.completionHour) {
+                                      const now = new Date();
+                                      updates.completionHour = (now.getHours() % 12 || 12).toString();
+                                      updates.completionMinute = now.getMinutes().toString().padStart(2, "0");
+                                      updates.completionPeriod = now.getHours() >= 12 ? "PM" : "AM";
+                                    }
+                                  }
+
                                   setFormData({
                                     ...formData,
-                                    followup_status: status,
+                                    ...updates
                                   });
                                   setIsStatusDropdownOpen(false);
                                 }}

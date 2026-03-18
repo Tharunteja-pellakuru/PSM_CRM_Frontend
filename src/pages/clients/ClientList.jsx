@@ -1519,12 +1519,9 @@ const ClientList = ({
                     {/* PROJECT BUDGET */}
                     <div className="space-y-1.5 md:col-span-2">
                       <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 flex items-center gap-1.5">
-                        PROJECT BUDGET (INR)
+                        PROJECT BUDGET
                       </label>
                       <div className="relative">
-                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
-                          ₹
-                        </div>
                         <input
                           type="number"
                           placeholder="e.g. 50000"

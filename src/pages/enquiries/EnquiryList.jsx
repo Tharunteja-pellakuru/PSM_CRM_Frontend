@@ -113,7 +113,7 @@ const EnquiryList = ({
     website: "",
     leadType: "Hot",
     leadCategory: 2,
-    country: "India",
+    country: "",
     notes: "",
   });
   const [showSimulateForm, setShowSimulateForm] = useState(false);
@@ -339,7 +339,7 @@ const EnquiryList = ({
       website: enquiry.website,
       leadType: "Warm",
       leadCategory: 2,
-      country: enquiry.country || "India",
+      country: enquiry.country || "",
       notes: enquiry.message,
     });
     setLeadModalOpen(true);

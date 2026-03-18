@@ -21,19 +21,13 @@ const SearchableDropdown = ({
     return optionLabel.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const selectedOption = options.find((option) => {
-    const optionValue =
-      typeof option === "string"
-        ? option
-        : option.id || option.code || option.name || option.value;
-    return optionValue === value;
-  });
+  const selectedOption = options.find(
+    (opt) => (opt.name || opt.label) === value || opt.code === value,
+  );
 
   const displayValue = selectedOption
-    ? typeof selectedOption === "string"
-      ? selectedOption
-      : selectedOption.name || selectedOption.label || selectedOption.code
-    : "";
+    ? selectedOption.code || selectedOption.name || selectedOption.label
+    : value || placeholder;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -49,7 +43,7 @@ const SearchableDropdown = ({
     const optionValue =
       typeof option === "string"
         ? option
-        : option.id || option.code || option.name || option.value;
+        : option.code || option.id || option.name || option.value;
     onChange(optionValue);
     setIsOpen(false);
     setSearchTerm("");
@@ -115,7 +109,7 @@ const SearchableDropdown = ({
                   const optionLabel =
                     typeof option === "string"
                       ? option
-                      : option.name || option.label || option.code;
+                      : option.code ? `${option.name} (${option.code})` : (option.name || option.label);
                   const isSelected = optionValue === value;
 
                   return (

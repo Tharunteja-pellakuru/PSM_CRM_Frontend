@@ -587,7 +587,10 @@ const ClientDetail = ({
                                 Select Status
                               </p>
                             </div>
-                            {["Hot", "Warm", "Cold", "Converted"].map((status) => (
+                            {(client.isConverted 
+                              ? ["Hot", "Warm", "Cold", "Converted"] 
+                              : ["Hot", "Warm", "Cold"]
+                            ).map((status) => (
                               <button
                                 key={status}
                                 type="button"

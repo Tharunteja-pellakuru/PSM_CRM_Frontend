@@ -28,6 +28,8 @@ import {
   Calendar,
   Zap,
   Check,
+  Pencil,
+  User,
 } from "lucide-react";
 import DatePicker from "../../components/ui/DatePicker";
 import { countries } from "../../utils/countries";
@@ -52,6 +54,7 @@ const LeadList = ({
   onDismissLead,
   onRestoreLead,
   onAddActivity,
+  onUpdateConvertedLead,
   allLeads = [],
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,16 +62,17 @@ const LeadList = ({
   const [leadTypeFilter, setLeadTypeFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [isTierDropdownOpen, setIsTierDropdownOpen] = useState(false);
+  const [isAddStatusDropdownOpen, setIsAddStatusDropdownOpen] = useState(false);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
-  const [countrySearchTerm, setCountrySearchTerm] = useState("");
+  const [isEditCategoryDropdownOpen, setIsEditCategoryDropdownOpen] =
+    useState(false);
+  const [isEditStatusDropdownOpen, setIsEditStatusDropdownOpen] =
+    useState(false);
 
   const tierButtonRef = useRef(null);
   const categoryButtonRef = useRef(null);
-  const countryButtonRef = useRef(null);
   const [tierDropdownStyle, setTierDropdownStyle] = useState({});
   const [categoryDropdownStyle, setCategoryDropdownStyle] = useState({});
-  const [countryDropdownStyle, setCountryDropdownStyle] = useState({});
 
   useEffect(() => {
     if (isTierDropdownOpen && tierButtonRef.current) {
@@ -97,36 +101,36 @@ const LeadList = ({
   }, [isCategoryDropdownOpen]);
 
   useEffect(() => {
-    if (isCountryDropdownOpen && countryButtonRef.current) {
-      const rect = countryButtonRef.current.getBoundingClientRect();
-      setCountryDropdownStyle({
-        position: "fixed",
-        top: `${rect.bottom + 8}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-        zIndex: 9999,
-      });
-    }
-  }, [isCountryDropdownOpen]);
-
-  useEffect(() => {
     const handleScrollResize = (e) => {
-      if (isTierDropdownOpen || isCategoryDropdownOpen) {
+      if (
+        isTierDropdownOpen ||
+        isCategoryDropdownOpen ||
+        isEditCategoryDropdownOpen ||
+        isEditStatusDropdownOpen
+      ) {
         if (
           e.type === "scroll" &&
           e.target.closest &&
           (e.target.closest(".tier-dropdown") ||
             e.target.closest(".category-dropdown") ||
+            e.target.closest(".edit-category-dropdown") ||
+            e.target.closest(".edit-status-dropdown") ||
             e.target.closest(".country-dropdown"))
         ) {
           return;
         }
         setIsTierDropdownOpen(false);
         setIsCategoryDropdownOpen(false);
-        setIsCountryDropdownOpen(false);
+        setIsEditCategoryDropdownOpen(false);
+        setIsEditStatusDropdownOpen(false);
       }
     };
-    if (isTierDropdownOpen || isCategoryDropdownOpen || isCountryDropdownOpen) {
+    if (
+      isTierDropdownOpen ||
+      isCategoryDropdownOpen ||
+      isEditCategoryDropdownOpen ||
+      isEditStatusDropdownOpen
+    ) {
       window.addEventListener("scroll", handleScrollResize, true);
       window.addEventListener("resize", handleScrollResize, true);
     }
@@ -134,7 +138,12 @@ const LeadList = ({
       window.removeEventListener("scroll", handleScrollResize, true);
       window.removeEventListener("resize", handleScrollResize, true);
     };
-  }, [isTierDropdownOpen, isCategoryDropdownOpen]);
+  }, [
+    isTierDropdownOpen,
+    isCategoryDropdownOpen,
+    isEditCategoryDropdownOpen,
+    isEditStatusDropdownOpen,
+  ]);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -145,19 +154,39 @@ const LeadList = ({
   const [nameSearch, setNameSearch] = useState("");
   const [leadView, setLeadView] = useState("Pending");
   const [clientSearchQuery, setClientSearchQuery] = useState("");
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
   const [isOnboardStatusDropdownOpen, setIsOnboardStatusDropdownOpen] =
     useState(false);
   const [isOnboardPriorityDropdownOpen, setIsOnboardPriorityDropdownOpen] =
     useState(false);
-  const [isOnboardClientStatusDropdownOpen, setIsOnboardClientStatusDropdownOpen] =
-    useState(false);
+  const [
+    isOnboardClientStatusDropdownOpen,
+    setIsOnboardClientStatusDropdownOpen,
+  ] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [followUpLeadId, setFollowUpLeadId] = useState(null);
-  const [isAddStatusDropdownOpen, setIsAddStatusDropdownOpen] = useState(false);
-  const [isAddCategoryDropdownOpen, setIsAddCategoryDropdownOpen] = useState(false);
+  const [isAddCategoryDropdownOpen, setIsAddCategoryDropdownOpen] =
+    useState(false);
+  const [showEditConvertedModal, setShowEditConvertedModal] = useState(false);
+  const [editingConvertedLeadId, setEditingConvertedLeadId] = useState(null);
+  const [editConvertedData, setEditConvertedData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    organisationName: "",
+    country: "",
+    state: "",
+    currency: "",
+    clientStatus: "Active",
+    projectName: "",
+    projectDescription: "",
+    projectCategory: 1,
+    projectStatus: "In Progress",
+    projectPriority: "High",
+    projectBudget: "",
+    deadline: "",
+    onboardingDate: "",
+  });
   const [followUpData, setFollowUpData] = useState({
     type: "call",
     description: "",
@@ -200,6 +229,89 @@ const LeadList = ({
     projectDescription: "",
     country: "",
   });
+
+  const handleEditConvertedClick = (lead) => {
+    setEditingConvertedLeadId(lead.id);
+
+    // Separating country code from phone number
+    let initialPhone = (lead.phone || "").trim();
+    let initialCountry = (lead.country || "").trim();
+
+    // Attempt to extract country code from phone if country is not already set clearly
+    const matchedCountry = countries.find((c) => {
+      const code = c.code;
+      const plainCode = code.replace("+", "");
+      const cleanPhone = initialPhone.replace("+", "").replace(/\s/g, "");
+      return cleanPhone.startsWith(plainCode);
+    });
+
+    if (matchedCountry) {
+      const code = matchedCountry.code;
+      const plainCode = code.replace("+", "");
+
+      // If the phone starts with the code, strip it
+      if (initialPhone.startsWith(code)) {
+        initialPhone = initialPhone.slice(code.length).trim();
+      } else if (initialPhone.replace("+", "").startsWith(plainCode)) {
+        initialPhone = initialPhone
+          .replace("+", "")
+          .slice(plainCode.length)
+          .trim();
+      }
+
+      // If country was not set or was set to the code, use the canonical name for the dropdown
+      if (
+        !initialCountry ||
+        initialCountry === code ||
+        initialCountry === plainCode
+      ) {
+        initialCountry = matchedCountry.code;
+      }
+    }
+
+    setEditConvertedData({
+      name: lead.name,
+      email: lead.email,
+      phone: initialPhone,
+      organisationName: lead.company || "",
+      country: initialCountry,
+      state: lead.state || "",
+      currency: lead.currency || "",
+      clientStatus: lead.status || "Active",
+      projectName: lead.projectName || "",
+      projectDescription: lead.projectDescription || lead.notes || "",
+      projectCategory: lead.projectCategory || 1,
+      projectStatus: lead.projectStatus || "In Progress",
+      projectPriority: lead.projectPriority || "High",
+      projectBudget: lead.budget || "",
+      deadline: lead.deadline || "",
+      onboardingDate: lead.onboardingDate || lead.joinedDate || "",
+      website: lead.website || "",
+      leadType: lead.leadType || "Converted",
+    });
+    // Ensure background filters are closed
+    setIsCategoryDropdownOpen(false);
+    setIsTierDropdownOpen(false);
+    setShowEditConvertedModal(true);
+  };
+
+  const handleEditConvertedSubmit = async (e) => {
+    e.preventDefault();
+    if (onUpdateConvertedLead && editingConvertedLeadId) {
+      try {
+        const result = await onUpdateConvertedLead(
+          editingConvertedLeadId,
+          editConvertedData,
+        );
+        if (result.success) {
+          setShowEditConvertedModal(false);
+          setEditingConvertedLeadId(null);
+        }
+      } catch (error) {
+        console.error("Failed to update converted lead:", error);
+      }
+    }
+  };
 
   const handleOnboardSubmit = async (e) => {
     e.preventDefault();
@@ -281,6 +393,66 @@ const LeadList = ({
 
     return matchesSearch && matchesStatus && matchesLeadType && matchesCategory;
   });
+
+  const renderContactDetails = (lead) => {
+    if (!lead.phone && !lead.email) return "N/A";
+
+    const countryInput = (lead.country || "").trim();
+    let countryCode = "";
+
+    if (countryInput) {
+      const countryObj = countries.find(
+        (c) =>
+          c.name.toLowerCase() === countryInput.toLowerCase() ||
+          c.code === countryInput ||
+          c.code.replace("+", "") === countryInput.replace("+", ""),
+      );
+      countryCode = countryObj ? countryObj.code : countryInput;
+    }
+
+    let phone = (lead.phone || "").trim();
+    if (countryCode) {
+      const plainCountryCode = countryCode.replace("+", "");
+      const cleanPhone = phone.replace("+", "").replace(/\s/g, "");
+
+      if (cleanPhone.startsWith(plainCountryCode)) {
+        // Remove country code from display phone if it's already there
+        // This handles "+91987...", "91987...", "+91 987...", etc.
+        if (phone.startsWith(countryCode)) {
+          phone = phone.slice(countryCode.length).trim();
+        } else if (phone.startsWith(plainCountryCode)) {
+          phone = phone.slice(plainCountryCode.length).trim();
+        } else if (
+          phone.startsWith("+") &&
+          phone.slice(1).trim().startsWith(plainCountryCode)
+        ) {
+          // Handles "+ 91 987..."
+          const afterPlus = phone.slice(1).trim();
+          phone = afterPlus.slice(plainCountryCode.length).trim();
+        }
+      }
+    }
+
+    return (
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2 text-primary">
+          <Phone size={12} className="text-secondary" />
+          <span className="text-xs font-bold whitespace-nowrap">
+            {countryCode ? `${countryCode} ` : ""}
+            {phone || "N/A"}
+          </span>
+        </div>
+        {lead.email && (
+          <div className="flex items-center gap-2 text-slate-400 mt-1">
+            <Mail size={12} />
+            <span className="text-[10px] font-bold truncate max-w-[150px]">
+              {lead.email}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const getStatusBadge = (lead) => {
     // For leads with status "Lead", show their leadType (Hot/Warm/Cold)
@@ -706,21 +878,7 @@ const LeadList = ({
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2 text-primary">
-                            <Phone size={12} className="text-secondary" />
-                            <span className="text-xs font-bold whitespace-nowrap">
-                              {lead.country ? `${lead.country} ` : ""}
-                              {lead.phone || "N/A"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-slate-400 mt-1">
-                            <Mail size={12} />
-                            <span className="text-[10px] font-bold truncate max-w-[150px]">
-                              {lead.email || "N/A"}
-                            </span>
-                          </div>
-                        </div>
+                        {renderContactDetails(lead)}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -739,86 +897,77 @@ const LeadList = ({
                           className="flex justify-end gap-3"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {onOnboardLead && lead.status === "Lead" && (
+                          {leadView === "Converted" ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOnboardingLeadId(lead.id);
-                                setOnboardingData({
-                                  name: lead.name,
-                                  email: lead.email,
-                                  phone: lead.phone,
-                                  clientType: "New",
-                                  status: "Active",
-                                  projectName: "",
-                                  projectCategory: 1, // Changed to numeric ID
-                                  projectPriority: "High",
-                                  projectDescription: "",
-                                  onboardingDate: new Date()
-                                    .toISOString()
-                                    .split("T")[0],
-                                  deadline: "",
-                                  scopeDocument: "",
-                                  projectStatus: "Planning",
-                                });
-                                setShowOnboardModal(true);
+                                handleEditConvertedClick(lead);
                               }}
-                              className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 transition-all active:scale-90 shadow-sm"
-                              title="Convert to Client"
+                              className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-all active:scale-90 shadow-sm"
+                              title="Edit Details"
                             >
-                              <UserCheck size={18} />
+                              <Pencil size={18} />
                             </button>
-                          )}
-                          {onDeleteLead && lead.status === "Dismissed" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteLead(lead.id);
-                              }}
-                              className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-300 hover:text-error hover:border-error hover:bg-error/5 transition-all active:scale-90 shadow-sm"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          )}
-                          {onDismissLead &&
-                            (lead.status === "Lead" || lead.isConverted) &&
-                            lead.status !== "Dismissed" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDismissLead(lead.id);
-                                }}
-                                className="p-2.5 bg-amber-50/50 border border-amber-200/50 rounded-lg text-amber-500/70 hover:text-amber-600 hover:border-amber-500 hover:bg-amber-50 transition-all active:scale-90 shadow-sm"
-                                title="Dismiss Lead"
-                              >
-                                <UserX size={18} />
-                              </button>
-                            )}
-                          {onRestoreLead &&
-                            lead.isConverted &&
-                            lead.status !== "Dismissed" && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onRestoreLead(lead.id);
-                                }}
-                                className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-300 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-all active:scale-90 shadow-sm"
-                                title="Revert as Lead"
-                              >
-                                <RotateCcw size={18} />
-                              </button>
-                            )}
-                          {onRestoreLead && lead.status === "Dismissed" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onRestoreLead(lead.id);
-                              }}
-                              className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-300 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-all active:scale-90 shadow-sm"
-                              title="Restore Lead"
-                            >
-                              <RotateCcw size={18} />
-                            </button>
+                          ) : (
+                            <>
+                              {onOnboardLead && lead.status === "Lead" && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOnboardingLeadId(lead.id);
+                                    setOnboardingData({
+                                      name: lead.name,
+                                      email: lead.email,
+                                      phone: lead.phone,
+                                      clientType: "New",
+                                      status: "Active",
+                                      projectName: "",
+                                      projectCategory: 1,
+                                      projectPriority: "High",
+                                      projectDescription: "",
+                                      onboardingDate: new Date()
+                                        .toISOString()
+                                        .split("T")[0],
+                                      deadline: "",
+                                      scopeDocument: "",
+                                      projectStatus: "Planning",
+                                      clientStatus: "Active",
+                                    });
+                                    setShowOnboardModal(true);
+                                  }}
+                                  className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-emerald-500 hover:border-emerald-500 hover:bg-emerald-50 transition-all active:scale-90 shadow-sm"
+                                  title="Convert to Client"
+                                >
+                                  <UserCheck size={18} />
+                                </button>
+                              )}
+                              {onDismissLead &&
+                                (lead.status === "Lead" || lead.isConverted) &&
+                                lead.status !== "Dismissed" && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDismissLead(lead.id);
+                                    }}
+                                    className="p-2.5 bg-amber-50/50 border border-amber-200/50 rounded-lg text-amber-500/70 hover:text-amber-600 hover:border-amber-500 hover:bg-amber-50 transition-all active:scale-90 shadow-sm"
+                                    title="Dismiss Lead"
+                                  >
+                                    <UserX size={18} />
+                                  </button>
+                                )}
+                              {onRestoreLead && lead.status === "Dismissed" && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRestoreLead(lead.id);
+                                  }}
+                                  className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-all active:scale-90 shadow-sm"
+                                  title="Restore Lead"
+                                >
+                                  <RotateCcw size={18} />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
@@ -898,23 +1047,7 @@ const LeadList = ({
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-2">
-                      <div className="flex items-center gap-2.5 text-primary group">
-                        <div className="w-7 h-7 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
-                          <Phone size={14} />
-                        </div>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          {lead.country ? `${lead.country} ` : ""}
-                          {lead.phone}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2.5 text-slate-500">
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
-                          <Mail size={14} />
-                        </div>
-                        <span className="text-xs font-bold truncate">
-                          {lead.email || "N/A"}
-                        </span>
-                      </div>
+                      {renderContactDetails(lead)}
                     </div>
                   )}
                 </div>
@@ -936,57 +1069,72 @@ const LeadList = ({
                     className="flex items-center gap-2"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {onOnboardLead && lead.status === "Lead" && (
+                    {leadView === "Converted" ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOnboardingLeadId(lead.id);
-                          setOnboardingData({
-                            name: lead.name,
-                            email: lead.email,
-                            phone: lead.phone,
-                            clientType: "New",
-                            status: "Active",
-                            projectName: "",
-                            projectDescription: "",
-                            onboardingDate: new Date()
-                              .toISOString()
-                              .split("T")[0],
-                            deadline: "",
-                            scopeDocument: "",
-                            projectStatus: "Planning",
-                          });
-                          setShowOnboardModal(true);
+                          handleEditConvertedClick(lead);
                         }}
-                        className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg hover:bg-emerald-100 transition-all active:scale-90"
+                        className="p-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-100 transition-all active:scale-90"
                       >
-                        <UserCheck size={16} />
+                        <Pencil size={16} />
                       </button>
+                    ) : (
+                      <>
+                        {onOnboardLead && lead.status === "Lead" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOnboardingLeadId(lead.id);
+                              setOnboardingData({
+                                name: lead.name,
+                                email: lead.email,
+                                phone: lead.phone,
+                                clientType: "New",
+                                status: "Active",
+                                projectName: "",
+                                projectDescription: "",
+                                onboardingDate: new Date()
+                                  .toISOString()
+                                  .split("T")[0],
+                                deadline: "",
+                                scopeDocument: "",
+                                projectStatus: "Planning",
+                                clientStatus: "Active",
+                              });
+                              setShowOnboardModal(true);
+                            }}
+                            className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg hover:bg-emerald-100 transition-all active:scale-90"
+                          >
+                            <UserCheck size={16} />
+                          </button>
+                        )}
+                        {onDismissLead &&
+                          (lead.status === "Lead" || lead.isConverted) &&
+                          lead.status !== "Dismissed" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDismissLead(lead.id);
+                              }}
+                              className="p-2 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg hover:bg-amber-100 transition-all active:scale-90"
+                            >
+                              <UserX size={16} />
+                            </button>
+                          )}
+                        {onRestoreLead && lead.status === "Dismissed" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRestoreLead(lead.id);
+                            }}
+                            className="p-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-100 transition-all active:scale-90"
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                        )}
+                      </>
                     )}
-                    {onDeleteLead && lead.status === "Dismissed" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteLead(lead.id);
-                        }}
-                        className="p-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-100 transition-all active:scale-90"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                    {onDismissLead &&
-                      (lead.status === "Lead" || lead.isConverted) &&
-                      lead.status !== "Dismissed" && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDismissLead(lead.id);
-                          }}
-                          className="p-2 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg hover:bg-amber-100 transition-all active:scale-90"
-                        >
-                          <UserX size={16} />
-                        </button>
-                      )}
                   </div>
                 </div>
               </div>
@@ -1071,120 +1219,13 @@ const LeadList = ({
                   />
                 </div>
 
-                <div className="space-y-1.5 relative">
-                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
-                    COUNTRY
-                  </label>
-                  <button
-                    type="button"
-                    ref={countryButtonRef}
-                    onClick={() =>
-                      setIsCountryDropdownOpen(!isCountryDropdownOpen)
-                    }
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium transition-all"
-                  >
-                    <span
-                      className={
-                        formData.country ? "text-[#18254D]" : "text-slate-400"
-                      }
-                    >
-                      {formData.country
-                        ? countries.find((c) => c.name === formData.country)
-                            ?.name +
-                          " (" +
-                          countries.find((c) => c.name === formData.country)
-                            ?.code +
-                          ")"
-                        : "Select Country"}
-                    </span>
-                    <ChevronDown
-                      size={16}
-                      className={`text-slate-400 transition-transform duration-300 ${isCountryDropdownOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-
-                  {isCountryDropdownOpen &&
-                    createPortal(
-                      <>
-                        <div
-                          className="fixed inset-0 z-[9998]"
-                          onClick={() => setIsCountryDropdownOpen(false)}
-                        />
-                        <div
-                          className="country-dropdown bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden z-[9999] animate-fade-in flex flex-col"
-                          style={countryDropdownStyle}
-                        >
-                          <div className="p-2 border-b border-slate-100 flex items-center gap-2 sticky top-0 bg-white z-10">
-                            <Search size={14} className="text-slate-400 ml-1" />
-                            <input
-                              autoFocus
-                              type="text"
-                              placeholder="Search country or code..."
-                              className="w-full bg-transparent border-none focus:ring-0 text-sm font-medium p-1"
-                              value={countrySearchTerm}
-                              onChange={(e) =>
-                                setCountrySearchTerm(e.target.value)
-                              }
-                            />
-                            {countrySearchTerm && (
-                              <button
-                                onClick={() => setCountrySearchTerm("")}
-                                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400"
-                              >
-                                <X size={14} />
-                              </button>
-                            )}
-                          </div>
-                          <div className="max-h-[250px] overflow-y-auto overflow-x-hidden custom-scrollbar py-1">
-                            {countries
-                              .filter(
-                                (c) =>
-                                  c.name
-                                    .toLowerCase()
-                                    .includes(
-                                      countrySearchTerm.toLowerCase(),
-                                    ) || c.code.includes(countrySearchTerm),
-                              )
-                              .map((c) => (
-                                <button
-                                  key={c.name + c.code}
-                                  type="button"
-                                  onClick={() => {
-                                    setFormData({
-                                      ...formData,
-                                      country: c.name,
-                                    });
-                                    setIsCountryDropdownOpen(false);
-                                    setCountrySearchTerm("");
-                                  }}
-                                  className={`w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors text-left ${
-                                    formData.country === c.name
-                                      ? "bg-secondary/5"
-                                      : ""
-                                  }`}
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-[#18254D]">
-                                      {c.name}
-                                    </span>
-                                    <span className="text-[10px] text-slate-400 font-bold tracking-widest">
-                                      {c.code}
-                                    </span>
-                                  </div>
-                                  {formData.country === c.name && (
-                                    <Check
-                                      size={16}
-                                      className="text-secondary"
-                                    />
-                                  )}
-                                </button>
-                              ))}
-                          </div>
-                        </div>
-                      </>,
-                      document.body,
-                    )}
-                </div>
+                <SearchableDropdown
+                  label="COUNTRY"
+                  options={countries}
+                  value={formData.country}
+                  onChange={(val) => setFormData({ ...formData, country: val })}
+                  placeholder="Select Country"
+                />
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
@@ -1233,7 +1274,8 @@ const LeadList = ({
                       className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
                     >
                       <span className="text-primary truncate">
-                        {CATEGORY_MAP[formData.projectCategory] || "Select Category"}
+                        {CATEGORY_MAP[formData.projectCategory] ||
+                          "Select Category"}
                       </span>
                       <ChevronDown
                         size={16}
@@ -1260,7 +1302,10 @@ const LeadList = ({
                               key={catId}
                               type="button"
                               onClick={() => {
-                                setFormData({ ...formData, projectCategory: catId });
+                                setFormData({
+                                  ...formData,
+                                  projectCategory: catId,
+                                });
                                 setIsAddCategoryDropdownOpen(false);
                               }}
                               className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
@@ -1313,12 +1358,15 @@ const LeadList = ({
                               Select Status
                             </p>
                           </div>
-                          {["Hot", "Warm", "Cold", "Converted"].map((status) => (
+                          {["Hot", "Warm", "Cold"].map((status) => (
                             <button
                               key={status}
                               type="button"
                               onClick={() => {
-                                setFormData({ ...formData, leadType: status });
+                                setFormData({
+                                  ...formData,
+                                  leadType: status,
+                                });
                                 setIsAddStatusDropdownOpen(false);
                               }}
                               className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
@@ -1328,10 +1376,15 @@ const LeadList = ({
                               }`}
                             >
                               <div className="flex items-center gap-2">
-                                {status === "Hot" && <Flame size={12} className="text-error" />}
-                                {status === "Warm" && <Sun size={12} className="text-warning" />}
-                                {status === "Cold" && <Snowflake size={12} className="text-info" />}
-                                {status === "Converted" && <UserCheck size={12} className="text-success" />}
+                                {status === "Hot" && (
+                                  <Flame size={12} className="text-error" />
+                                )}
+                                {status === "Warm" && (
+                                  <Sun size={12} className="text-warning" />
+                                )}
+                                {status === "Cold" && (
+                                  <Snowflake size={12} className="text-info" />
+                                )}
                                 <span>{status}</span>
                               </div>
                             </button>
@@ -1761,26 +1814,28 @@ const LeadList = ({
                               Select Status
                             </p>
                           </div>
-                          {["Hold", "In Progress", "Completed"].map((status) => (
-                            <button
-                              key={status}
-                              type="button"
-                              onClick={() => {
-                                setOnboardingData({
-                                  ...onboardingData,
-                                  projectStatus: status,
-                                });
-                                setIsOnboardStatusDropdownOpen(false);
-                              }}
-                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
-                                onboardingData.projectStatus === status
-                                  ? "bg-slate-100 text-secondary"
-                                  : "text-[#18254D] hover:bg-slate-50"
-                              }`}
-                            >
-                              {status}
-                            </button>
-                          ))}
+                          {["Hold", "In Progress", "Completed"].map(
+                            (status) => (
+                              <button
+                                key={status}
+                                type="button"
+                                onClick={() => {
+                                  setOnboardingData({
+                                    ...onboardingData,
+                                    projectStatus: status,
+                                  });
+                                  setIsOnboardStatusDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                  onboardingData.projectStatus === status
+                                    ? "bg-slate-100 text-secondary"
+                                    : "text-[#18254D] hover:bg-slate-50"
+                                }`}
+                              >
+                                {status}
+                              </button>
+                            ),
+                          )}
                         </div>
                       </>
                     )}
@@ -1854,7 +1909,8 @@ const LeadList = ({
 
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 flex items-center gap-1.5">
-                    PROJECT BUDGET ({onboardingData.currency === "USD" ? "USD" : "INR"})
+                    PROJECT BUDGET (
+                    {onboardingData.currency === "USD" ? "USD" : "INR"})
                   </label>
                   <div className="relative">
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">
@@ -1862,7 +1918,11 @@ const LeadList = ({
                     </div>
                     <input
                       type="text"
-                      placeholder={onboardingData.currency === "USD" ? "e.g. 5,000" : "e.g. 5,00,000"}
+                      placeholder={
+                        onboardingData.currency === "USD"
+                          ? "e.g. 5,000"
+                          : "e.g. 5,00,000"
+                      }
                       className="w-full pl-8 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium shadow-sm"
                       value={onboardingData.projectBudget}
                       onChange={(e) =>
@@ -1930,9 +1990,10 @@ const LeadList = ({
                       <span
                         className={`text-sm font-bold ${onboardingData.scopeDocument ? "text-[#18254D]" : "text-slate-400"}`}
                       >
-                        {onboardingData.scopeDocument instanceof File 
-                          ? onboardingData.scopeDocument.name 
-                          : typeof onboardingData.scopeDocument === "string" && onboardingData.scopeDocument 
+                        {onboardingData.scopeDocument instanceof File
+                          ? onboardingData.scopeDocument.name
+                          : typeof onboardingData.scopeDocument === "string" &&
+                              onboardingData.scopeDocument
                             ? onboardingData.scopeDocument
                             : "Upload scope document (PDF)"}
                       </span>
@@ -1958,7 +2019,302 @@ const LeadList = ({
         </div>
       )}
 
-      {/* Follow Up Modal */}
+      {/* Edit Converted Lead Modal */}
+      {showEditConvertedModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-xl rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-fade-in my-auto flex flex-col">
+            <div className="bg-primary p-4 text-white relative">
+              <button
+                onClick={() => setShowEditConvertedModal(false)}
+                className="absolute top-4 right-4 p-1.5 hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <X size={18} strokeWidth={3} />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-secondary/10 rounded-xl flex items-center justify-center shadow-lg border border-secondary/20">
+                  <Pencil
+                    size={18}
+                    className="text-secondary"
+                    strokeWidth={3}
+                  />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold tracking-tighter leading-none">
+                    Edit Lead
+                  </h3>
+                  <p className="text-slate-400 text-[9px] font-bold  tracking-widest mt-0.5">
+                    Lead Details
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleEditConvertedSubmit}
+              className="p-4 md:p-5 space-y-4 max-h-[65vh] overflow-y-auto"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* EDIT LEAD FIELDS (MATCHING NEW LEAD MODAL) */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                    LEAD NAME
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium"
+                    value={editConvertedData.name}
+                    onChange={(e) =>
+                      setEditConvertedData({
+                        ...editConvertedData,
+                        name: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                    EMAIL ID
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="rahul.sharma@example.com"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium"
+                    value={editConvertedData.email}
+                    onChange={(e) =>
+                      setEditConvertedData({
+                        ...editConvertedData,
+                        email: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <SearchableDropdown
+                  label="COUNTRY"
+                  options={countries}
+                  value={editConvertedData.country}
+                  onChange={(val) =>
+                    setEditConvertedData({ ...editConvertedData, country: val })
+                  }
+                  placeholder="Select Country"
+                />
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                    PHONE NUMBER
+                  </label>
+                  <input
+                    required
+                    type="tel"
+                    placeholder="e.g. +91 98765 43210"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium"
+                    value={editConvertedData.phone}
+                    onChange={(e) =>
+                      setEditConvertedData({
+                        ...editConvertedData,
+                        phone: e.target.value.replace(/\D/g, ""),
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                    WEBSITE URL (OPTIONAL)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. www.company.com"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium"
+                    value={editConvertedData.website}
+                    onChange={(e) =>
+                      setEditConvertedData({
+                        ...editConvertedData,
+                        website: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 uppercase">
+                    LEAD CATEGORY
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsEditCategoryDropdownOpen(
+                          !isEditCategoryDropdownOpen,
+                        )
+                      }
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                    >
+                      <span className="text-primary truncate">
+                        {CATEGORY_MAP[editConvertedData.projectCategory] ||
+                          "Select Category"}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${
+                          isEditCategoryDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isEditCategoryDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setIsEditCategoryDropdownOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top edit-category-dropdown">
+                          <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                            <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                              Select Category
+                            </p>
+                          </div>
+                          {[1, 2, 3].map((catId) => (
+                            <button
+                              key={catId}
+                              type="button"
+                              onClick={() => {
+                                setEditConvertedData({
+                                  ...editConvertedData,
+                                  projectCategory: catId,
+                                });
+                                setIsEditCategoryDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                editConvertedData.projectCategory === catId
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
+                            >
+                              {CATEGORY_MAP[catId]}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1 uppercase">
+                    LEAD STATUS
+                  </label>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setIsEditStatusDropdownOpen(!isEditStatusDropdownOpen)
+                      }
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                    >
+                      <span className="text-primary truncate">
+                        {editConvertedData.leadType || "Select Status"}
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${
+                          isEditStatusDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isEditStatusDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[80]"
+                          onClick={() => setIsEditStatusDropdownOpen(false)}
+                        />
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top edit-status-dropdown">
+                          <div className="bg-[#18254D] px-4 py-3 border-b border-white/10">
+                            <p className="text-[9px] font-bold text-white/50  tracking-widest">
+                              Select Status
+                            </p>
+                          </div>
+                          {["Converted"].map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => {
+                                setEditConvertedData({
+                                  ...editConvertedData,
+                                  leadType: status,
+                                });
+                                setIsEditStatusDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
+                                editConvertedData.leadType === status
+                                  ? "bg-slate-100 text-secondary"
+                                  : "text-[#18254D] hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {status === "Hot" && (
+                                  <Flame size={12} className="text-error" />
+                                )}
+                                {status === "Warm" && (
+                                  <Sun size={12} className="text-warning" />
+                                )}
+                                {status === "Cold" && (
+                                  <Snowflake size={12} className="text-info" />
+                                )}
+                                {status === "Converted" && (
+                                  <UserCheck
+                                    size={12}
+                                    className="text-success"
+                                  />
+                                )}
+                                <span>{status}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-[10px] font-bold text-[#18254D]  tracking-widest ml-1">
+                    MESSAGE
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Interested in cloud migration services..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium resize-none shadow-sm"
+                    value={editConvertedData.projectDescription}
+                    onChange={(e) =>
+                      setEditConvertedData({
+                        ...editConvertedData,
+                        projectDescription: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-[#18254D] text-white rounded-2xl text-[11px] font-bold  tracking-[0.25em] shadow-xl active:scale-[0.97] transition-all hover:bg-[#1e2e5e] hover:shadow-2xl flex items-center justify-center gap-3 group/btn"
+                >
+                  <Check size={20} />
+                  <span>SAVE CHANGES</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showFollowUpModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white w-full max-w-xl rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-fade-in my-auto flex flex-col">

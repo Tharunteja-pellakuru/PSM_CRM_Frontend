@@ -245,11 +245,17 @@ function AppRoutes() {
           country: c.client_country,
           state: c.client_state,
           currency: c.client_currency,
+          lead_id: c.lead_id, // Added lead_id to client object
           avatar: `https://picsum.photos/100/100?random=${c.client_id}`,
           joinedDate: c.created_at?.split("T")[0] || new Date().toISOString().split("T")[0],
           lastContact: c.updated_at?.split("T")[0] || new Date().toISOString().split("T")[0],
         }));
-        setClients(transformedClients);
+        setClients((prev) => {
+          const leads = prev.filter(
+            (c) => c.status === "Lead" || c.status === "Dismissed",
+          );
+          return [...transformedClients, ...leads];
+        });
       })
       .catch(() => console.log("Failed to fetch clients"));
   }, [isLoggedIn]);
@@ -583,6 +589,101 @@ function AppRoutes() {
 
   function handleUpdateClient(id, data) {
     setClients((prev) => prev.map((c) => (c.id == id ? { ...c, ...data } : c)));
+  }
+
+  async function handleUpdateConvertedLead(id, data) {
+    try {
+      // 1. Find associated client and project
+      const client = clients.find((c) => c.lead_id == id);
+      if (!client) throw new Error("Client not found for this lead");
+
+      const project = projects.find((p) => p.clientId == client.id);
+      if (!project) console.warn("Project not found for this client");
+
+      // 2. Update Lead Details (Name, Email, Phone, Category, Country)
+      const leadPayload = {
+        full_name: data.name,
+        email: data.email,
+        phone_number: data.phone,
+        lead_category: data.projectCategory,
+        country: data.country,
+        lead_status: "Converted",
+        website_url: data.website || "",
+        message: data.notes || "",
+      };
+
+      const leadRes = await fetch(`${BASE_URL}/api/update-lead/${id}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(leadPayload),
+      });
+
+      if (!leadRes.ok) throw new Error("Failed to update lead details");
+
+      // 3. Update Client Details (Organisation, State, Currency)
+      const clientPayload = {
+        organisation_name: data.organisationName,
+        client_name: data.name,
+        client_country: data.country,
+        client_state: data.state,
+        client_currency: data.currency,
+        client_status: data.clientStatus || "Active",
+      };
+
+      const clientRes = await fetch(`${BASE_URL}/api/update-client/${client.id}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(clientPayload),
+      });
+
+      if (!clientRes.ok) throw new Error("Failed to update client details");
+
+      // 4. Update Project Details if project exists
+      if (project) {
+        const projectPayload = {
+          project_name: data.projectName,
+          project_description: data.projectDescription,
+          project_category: data.projectCategory,
+          project_status: data.projectStatus,
+          project_priority: data.projectPriority,
+          project_budget: parseInt(data.projectBudget),
+          onboarding_date: data.onboardingDate,
+          deadline_date: data.deadline,
+        };
+
+        const projectRes = await fetch(`${BASE_URL}/api/update-project/${project.id}`, {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify(projectPayload),
+        });
+
+        if (!projectRes.ok) throw new Error("Failed to update project details");
+      }
+
+      // 5. Update local states
+      // Update Leads
+      setLeads((prev) =>
+        prev.map((l) => (l.id == id ? { ...l, ...data, isConverted: true, leadType: "Converted" } : l))
+      );
+
+      // Update Clients
+      setClients((prev) =>
+        prev.map((c) => (c.lead_id == id ? { ...c, ...data, company: data.organisationName } : c))
+      );
+
+      // Update Projects
+      if (project) {
+        setProjects((prev) =>
+          prev.map((p) => (p.clientId == client.id ? { ...p, ...data, name: data.projectName, budget: data.projectBudget } : p))
+        );
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Update error:", error);
+      alert("Failed to update converted lead: " + error.message);
+      return { success: false };
+    }
   }
 
   async function handleDismissLead(id) {
@@ -1230,6 +1331,7 @@ function AppRoutes() {
               onDismissLead={handleDismissLead}
               onRestoreLead={handleRestoreLead}
               onAddLead={handleAddClient}
+              onUpdateConvertedLead={handleUpdateConvertedLead}
               onAddActivity={handleAddActivity}
               allLeads={leads}
             />
