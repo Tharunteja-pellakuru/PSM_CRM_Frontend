@@ -1,5 +1,9 @@
 /* Global Typography Utilities and Resets */
 
+* {
+  font-family: 'Calibri', sans-serif !important;
+}
+
 @layer base {
   body {
     -webkit-font-smoothing: antialiased;
