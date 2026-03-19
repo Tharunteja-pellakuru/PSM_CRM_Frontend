@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toast } from "react-hot-toast";
 import { createPortal } from "react-dom";
 import DatePicker from "../../components/ui/DatePicker";
 import {
@@ -24,6 +25,7 @@ import { CATEGORY_MAP, REVERSE_CATEGORY_MAP } from "../../constants/categoryCons
 const FollowUpList = ({
   followUps,
   clients,
+  projects,
   onToggleStatus,
   onAddFollowUp,
   onEditFollowUp,
@@ -31,6 +33,7 @@ const FollowUpList = ({
   onNavigate,
   onSelectClient,
   typeFilter = "All",
+  loading = false,
 }) => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -42,12 +45,15 @@ const FollowUpList = ({
   const [isHourDropdownOpen, setIsHourDropdownOpen] = useState(false);
   const [isMinuteDropdownOpen, setIsMinuteDropdownOpen] = useState(false);
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [projectSearchTerm, setProjectSearchTerm] = useState("");
   const [formData, setFormData] = useState({
     clientId: "",
+    projectId: "",
     title: "",
     description: "",
-    followup_date: new Date().toISOString().split("T")[0],
+    followup_date: new Date().toLocaleDateString('en-CA'),
     followup_mode: "call",
     followup_status: "pending",
     follow_brief: "",
@@ -56,7 +62,7 @@ const FollowUpList = ({
     timeMinute: "00",
     timePeriod: "PM",
     completed_by: "",
-    completionDate: new Date().toISOString().split("T")[0],
+    completionDate: new Date().toLocaleDateString('en-CA'),
     completionHour: "12",
     completionMinute: "00",
     completionPeriod: "PM",
@@ -68,7 +74,7 @@ const FollowUpList = ({
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [completionBrief, setCompletionBrief] = useState("");
   const [completingFollowUpId, setCompletingFollowUpId] = useState(null);
-  const [completionDate, setCompletionDate] = useState(new Date().toISOString().split("T")[0]);
+  const [completionDate, setCompletionDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [completionHour, setCompletionHour] = useState((new Date().getHours() % 12 || 12).toString());
   const [completionMinute, setCompletionMinute] = useState(new Date().getMinutes().toString().padStart(2, "0"));
   const [completionPeriod, setCompletionPeriod] = useState(new Date().getHours() >= 12 ? "PM" : "AM");
@@ -80,7 +86,10 @@ const FollowUpList = ({
   const [isCompMinOpen, setIsCompMinOpen] = useState(false);
   const [isCompPeriodOpen, setIsCompPeriodOpen] = useState(false);
 
-  const getClientById = (id) => clients.find((c) => c.id == id);
+  const getClientById = (id) => {
+    if (!id) return null;
+    return clients.find((c) => c.id == id || (c.lead_id && c.lead_id == id));
+  };
   const isOverdue = (date) =>
     new Date(date) < new Date(new Date().setHours(0, 0, 0, 0));
   const isToday = (date) => {
@@ -148,7 +157,7 @@ const FollowUpList = ({
 
   const filteredFollowUps = baseFiltered
     .filter((f) => {
-      if (f.status === "completed" && (activeFilter !== "All" || typeFilter !== "Lead")) return false;
+      if (f.status === "completed" && activeFilter !== "All") return false;
       if (activeFilter === "Overdue")
         return isOverdue(f.dueDate) && f.status === "pending";
       if (activeFilter === "Today")
@@ -159,11 +168,20 @@ const FollowUpList = ({
         );
       return true;
     })
-    .sort(
-      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-    );
+    .sort((a, b) => {
+      const sA = (a.status || a.followup_status || "").toLowerCase();
+      const sB = (b.status || b.followup_status || "").toLowerCase();
+      
+      const isCompletedA = sA === "completed";
+      const isCompletedB = sB === "completed";
+      
+      if (isCompletedA && !isCompletedB) return 1;
+      if (!isCompletedA && isCompletedB) return -1;
+      
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Convert 12h to 24h for backend
@@ -172,49 +190,64 @@ const FollowUpList = ({
     if (formData.timePeriod === "AM" && hour === 12) hour = 0;
     const time24 = `${hour.toString().padStart(2, "0")}:${formData.timeMinute}`;
 
-    // Combine date and time
-    const combinedDateTime = new Date(`${formData.followup_date}T${time24}`).toISOString();
+    // Combine date and time into MySQL-friendly local format
+    const combinedDateTime = `${formData.followup_date} ${time24}:00`;
     
     let compHour = parseInt(formData.completionHour || "12");
     if (formData.completionPeriod === "PM" && compHour < 12) compHour += 12;
     if (formData.completionPeriod === "AM" && compHour === 12) compHour = 0;
     const compTime24 = `${compHour.toString().padStart(2, "0")}:${formData.completionMinute || "00"}`;
-    const combinedCompletionStr = new Date(`${formData.completionDate || new Date().toISOString().split("T")[0]}T${compTime24}`).toISOString();
+    const combinedCompletionStr = `${formData.completionDate || new Date().toLocaleDateString('en-CA')} ${compTime24}:00`;
 
-    if (formData.id) {
-      onEditFollowUp &&
-        onEditFollowUp({
-          ...formData,
-          dueDate: combinedDateTime,
-          followup_date: combinedDateTime, // Sending combined for backend
-          completed_at: combinedCompletionStr,
-        });
-    } else {
-      onAddFollowUp({
-        ...formData,
-        dueDate: combinedDateTime,
-        followup_date: combinedDateTime, // Sending combined for backend
+    const selectedClient = clients.find((c) => c.id == formData.clientId);
+    const finalClientId = selectedClient?.status === "Active" ? selectedClient.lead_id : formData.clientId;
+
+    try {
+      if (formData.id) {
+        if (onEditFollowUp) {
+          await onEditFollowUp({
+            ...formData,
+            clientId: finalClientId,
+            dueDate: combinedDateTime,
+            followup_date: combinedDateTime,
+            completed_at: combinedCompletionStr,
+          });
+          toast.success("Follow-up updated successfully!");
+        }
+      } else {
+        if (onAddFollowUp) {
+          await onAddFollowUp({
+            ...formData,
+            clientId: finalClientId,
+            dueDate: combinedDateTime,
+            followup_date: combinedDateTime,
+          });
+          toast.success("Follow-up added successfully!");
+        }
+      }
+      setShowAddModal(false);
+      setFormData({
+        clientId: "",
+        title: "",
+        description: "",
+        followup_date: new Date().toLocaleDateString('en-CA'),
+        followup_mode: "call",
+        followup_status: "pending",
+        follow_brief: "",
+        priority: "Medium",
+        timeHour: "12",
+        timeMinute: "00",
+        timePeriod: "PM",
+        completed_by: "",
+        completionDate: new Date().toLocaleDateString('en-CA'),
+        completionHour: "12",
+        completionMinute: "00",
+        completionPeriod: "PM",
       });
+    } catch (error) {
+      toast.error("Failed to save follow-up.");
+      console.error(error);
     }
-    setShowAddModal(false);
-    setFormData({
-      clientId: "",
-      title: "",
-      description: "",
-      followup_date: new Date().toISOString().split("T")[0],
-      followup_mode: "call",
-      followup_status: "pending",
-      follow_brief: "",
-      priority: "Medium",
-      timeHour: "12",
-      timeMinute: "00",
-      timePeriod: "PM",
-      completed_by: "",
-      completionDate: new Date().toISOString().split("T")[0],
-      completionHour: "12",
-      completionMinute: "00",
-      completionPeriod: "PM",
-    });
   };
 
   const getPriorityBadge = (p) => {
@@ -227,6 +260,18 @@ const FollowUpList = ({
         return "bg-info/10 text-info border-info/20";
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500">Loading follow-ups...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full relative">
@@ -475,29 +520,27 @@ const FollowUpList = ({
                         if (f.status === "completed" && f.completed_at) {
                           const cd = new Date(f.completed_at);
                           if (!isNaN(cd.getTime())) {
-                            compDate = cd.toISOString().split("T")[0];
+                            compDate = `${cd.getFullYear()}-${(cd.getMonth() + 1).toString().padStart(2, '0')}-${cd.getDate().toString().padStart(2, '0')}`;
                             compHr = (cd.getHours() % 12 || 12).toString();
                             compMin = cd.getMinutes().toString().padStart(2, "0");
                             compPrd = cd.getHours() >= 12 ? "PM" : "AM";
                           }
                         }
 
+                        const d = f.dueDate ? new Date(f.dueDate) : new Date();
+                        const localDate = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+                        const localHour24 = d.getHours();
+                        const localHour12 = (localHour24 % 12 || 12).toString();
+                        const localMinute = d.getMinutes().toString().padStart(2, "0");
+                        const localPeriod = localHour24 >= 12 ? "PM" : "AM";
+
                         setFormData({
                           ...f,
                           followup_status: f.status || f.followup_status || "pending",
-                          followup_date: f.dueDate
-                            ? new Date(f.dueDate).toISOString().split("T")[0]
-                            : f.followup_date ||
-                              new Date().toISOString().split("T")[0],
-                          timeHour: f.dueDate 
-                            ? (new Date(f.dueDate).getHours() % 12 || 12).toString() 
-                            : "12",
-                          timeMinute: f.dueDate 
-                            ? new Date(f.dueDate).getMinutes().toString().padStart(2, "0") 
-                            : "00",
-                          timePeriod: f.dueDate 
-                            ? (new Date(f.dueDate).getHours() >= 12 ? "PM" : "AM") 
-                            : "PM",
+                          followup_date: localDate,
+                          timeHour: localHour12,
+                          timeMinute: localMinute,
+                          timePeriod: localPeriod,
                           completed_by: f.completed_by || "",
                           completionDate: compDate,
                           completionHour: compHr,
@@ -705,8 +748,7 @@ const FollowUpList = ({
                       clientId: "",
                       title: "",
                       description: "",
-                      followup_date: new Date().toISOString().split("T")[0],
-                      followup_time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+                      followup_date: new Date().toLocaleDateString('en-CA'),
                       followup_mode: "call",
                       followup_status: "pending",
                       follow_brief: "",
@@ -731,135 +773,203 @@ const FollowUpList = ({
               </div>
               <form onSubmit={handleSubmit} className="p-5 space-y-3">
                 <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
-                      {typeFilter === "Active"
-                        ? "Client Name"
-                        : typeFilter === "Lead"
-                          ? "Lead Name"
-                          : "Target Identity"}
-                    </label>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setIsClientDropdownOpen(!isClientDropdownOpen)
-                        }
-                        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium shadow-sm hover:border-secondary transition-all"
-                      >
-                        <span className="text-primary truncate max-w-[90%]">
-                          {formData.clientId
-                            ? clients.find((c) => c.id == formData.clientId)
-                                ?.name
-                            : typeFilter === "Active"
-                              ? "Select a client..."
-                              : typeFilter === "Lead"
-                                ? "Select a lead..."
-                                : "Select a client or lead..."}
-                        </span>
-                        <ChevronDown
-                          size={16}
-                          className={`text-slate-400 transition-transform flex-shrink-0 ${isClientDropdownOpen ? "rotate-180" : ""}`}
-                        />
-                      </button>
-
-                      {isClientDropdownOpen && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-[80]"
-                            onClick={() => setIsClientDropdownOpen(false)}
+                  {typeFilter === "Active" ? (
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-primary tracking-widest ml-1">
+                        Select Project
+                      </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium shadow-sm hover:border-secondary transition-all"
+                        >
+                          <span className="text-primary truncate max-w-[90%]">
+                            {formData.projectId
+                              ? projects.find((p) => p.id == formData.projectId)?.name
+                              : "Select a project..."}
+                          </span>
+                          <ChevronDown
+                            size={16}
+                            className={`text-slate-400 transition-transform flex-shrink-0 ${isProjectDropdownOpen ? "rotate-180" : ""}`}
                           />
-                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top max-h-80 flex flex-col">
-                            <div className="sticky top-0 bg-[#18254D] z-10">
-                              <div className="px-4 py-3 border-b border-white/10">
-                                <p className="text-[9px] font-bold text-white/50  tracking-widest">
-                                  Select {typeFilter === "Active" ? "Client" : typeFilter === "Lead" ? "Lead" : "Client/Lead"}
-                                </p>
-                              </div>
-                              <div className="p-2 border-b border-slate-100 bg-slate-50">
-                                <div className="relative">
-                                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                  <input
-                                    type="text"
-                                    placeholder="Search..."
-                                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-secondary transition-colors"
-                                    value={clientSearchTerm}
-                                    onChange={(e) => setClientSearchTerm(e.target.value)}
-                                    autoFocus
-                                  />
+                        </button>
+
+                        {isProjectDropdownOpen && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-[80]"
+                              onClick={() => setIsProjectDropdownOpen(false)}
+                            />
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top max-h-80 flex flex-col">
+                              <div className="sticky top-0 bg-[#18254D] z-10">
+                                <div className="px-4 py-3 border-b border-white/10">
+                                  <p className="text-[9px] font-bold text-white/50 tracking-widest">
+                                    Select Project
+                                  </p>
+                                </div>
+                                <div className="p-2 border-b border-slate-100 bg-slate-50">
+                                  <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                    <input
+                                      type="text"
+                                      placeholder="Search projects..."
+                                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-secondary transition-colors"
+                                      value={projectSearchTerm}
+                                      onChange={(e) => setProjectSearchTerm(e.target.value)}
+                                      autoFocus
+                                    />
+                                  </div>
                                 </div>
                               </div>
+                              <div className="overflow-y-auto max-h-60">
+                                {projects
+                                  .filter(p => {
+                                    // Only show active/in-progress/hold projects (exclude completed)
+                                    if (p.status === "Completed") return false;
+                                    
+                                    // Search filtering
+                                    if (!projectSearchTerm.trim()) return true;
+                                    const q = projectSearchTerm.toLowerCase();
+                                    return p.name?.toLowerCase().includes(q) || p.clientName?.toLowerCase().includes(q);
+                                  })
+                                  .map((p) => (
+                                    <button
+                                      key={p.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setFormData({ 
+                                          ...formData, 
+                                          projectId: p.id,
+                                          clientId: p.clientId,
+                                          projectName: p.name
+                                        });
+                                        setIsProjectDropdownOpen(false);
+                                        setProjectSearchTerm("");
+                                      }}
+                                      className={`w-full text-left px-4 py-2.5 text-[10px] font-bold tracking-widest transition-colors ${
+                                        formData.projectId == p.id
+                                          ? "bg-slate-100 text-secondary"
+                                          : "text-[#18254D] hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span>{p.name}</span>
+                                        <span className="text-[8px] opacity-50">{p.clientName}</span>
+                                      </div>
+                                    </button>
+                                  ))}
+                                {projects.filter(p => {
+                                  if (p.status === "Completed") return false;
+                                  if (!projectSearchTerm.trim()) return true;
+                                  const q = projectSearchTerm.toLowerCase();
+                                  return p.name?.toLowerCase().includes(q) || p.clientName?.toLowerCase().includes(q);
+                                }).length === 0 && (
+                                  <div className="px-4 py-6 text-center">
+                                    <p className="text-[10px] font-bold text-slate-400 italic">No active projects found</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="overflow-y-auto max-h-60">
-                              {clients
-                                .filter(c => {
-                                  // Type filtering if needed
-                                  if (typeFilter === "Active" && c.status !== "Active") return false;
-                                  if (typeFilter === "Lead" && c.status !== "Lead") return false;
-                                  
-                                  // Search filtering
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-primary tracking-widest ml-1">
+                        {typeFilter === "Lead" ? "Lead Name" : "Target Identity"}
+                      </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium shadow-sm hover:border-secondary transition-all"
+                        >
+                          <span className="text-primary truncate max-w-[90%]">
+                            {formData.clientId
+                              ? clients.find((c) => c.id == formData.clientId)?.name
+                              : typeFilter === "Lead" ? "Select a lead..." : "Select a client or lead..."}
+                          </span>
+                          <ChevronDown
+                            size={16}
+                            className={`text-slate-400 transition-transform flex-shrink-0 ${isClientDropdownOpen ? "rotate-180" : ""}`}
+                          />
+                        </button>
+
+                        {isClientDropdownOpen && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-[80]"
+                              onClick={() => setIsClientDropdownOpen(false)}
+                            />
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[90] animate-fade-in-up origin-top max-h-80 flex flex-col">
+                              <div className="sticky top-0 bg-[#18254D] z-10">
+                                <div className="px-4 py-3 border-b border-white/10">
+                                  <p className="text-[9px] font-bold text-white/50 tracking-widest">
+                                    Select {typeFilter === "Lead" ? "Lead" : "Client/Lead"}
+                                  </p>
+                                </div>
+                                <div className="p-2 border-b border-slate-100 bg-slate-50">
+                                  <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                    <input
+                                      type="text"
+                                      placeholder="Search..."
+                                      className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-secondary transition-colors"
+                                      value={clientSearchTerm}
+                                      onChange={(e) => setClientSearchTerm(e.target.value)}
+                                      autoFocus
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="overflow-y-auto max-h-60">
+                                {clients
+                                  .filter(c => {
+                                    if (typeFilter === "Lead" && (c.status !== "Lead" || c.isConverted)) return false;
+                                    if (!clientSearchTerm.trim()) return true;
+                                    const q = clientSearchTerm.toLowerCase();
+                                    return c.name?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q);
+                                  })
+                                  .map((c) => (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setFormData({ ...formData, clientId: c.id });
+                                        setIsClientDropdownOpen(false);
+                                        setClientSearchTerm("");
+                                      }}
+                                      className={`w-full text-left px-4 py-2.5 text-[10px] font-bold tracking-widest transition-colors ${
+                                        formData.clientId == c.id
+                                          ? "bg-slate-100 text-secondary"
+                                          : "text-[#18254D] hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span>{c.name}</span>
+                                        {c.company && (
+                                          <span className="text-[8px] opacity-50">{c.company}</span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  ))}
+                                {clients.filter(c => {
+                                  if (typeFilter === "Lead" && (c.status !== "Lead" || c.isConverted)) return false;
                                   if (!clientSearchTerm.trim()) return true;
                                   const q = clientSearchTerm.toLowerCase();
                                   return c.name?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q);
-                                })
-                                .map((c) => (
-                                  <button
-                                    key={c.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setFormData({ ...formData, clientId: c.id });
-                                      setIsClientDropdownOpen(false);
-                                      setClientSearchTerm("");
-                                    }}
-                                    className={`w-full text-left px-4 py-2.5 text-[10px] font-bold  tracking-widest transition-colors ${
-                                      formData.clientId == c.id
-                                        ? "bg-slate-100 text-secondary"
-                                        : "text-[#18254D] hover:bg-slate-50"
-                                    }`}
-                                  >
-                                    <div className="flex flex-col">
-                                      <span>{c.name}</span>
-                                      {c.company && (
-                                        <span className="text-[8px] opacity-50">{c.company}</span>
-                                      )}
-                                    </div>
-                                  </button>
-                                ))}
-                              {clients.filter(c => {
-                                if (typeFilter === "Active" && c.status !== "Active") return false;
-                                if (typeFilter === "Lead" && c.status !== "Lead") return false;
-                                if (!clientSearchTerm.trim()) return true;
-                                const q = clientSearchTerm.toLowerCase();
-                                return c.name?.toLowerCase().includes(q) || c.company?.toLowerCase().includes(q);
-                              }).length === 0 && (
-                                <div className="px-4 py-6 text-center">
-                                  <p className="text-[10px] font-bold text-slate-400 italic">No results found</p>
-                                </div>
-                              )}
+                                }).length === 0 && (
+                                  <div className="px-4 py-6 text-center">
+                                    <p className="text-[10px] font-bold text-slate-400 italic">No results found</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {typeFilter === "Active" && (
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-primary  tracking-widest ml-1">
-                        Project Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Website Redesign"
-                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium shadow-sm focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none"
-                        value={formData.projectName || ""}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            projectName: e.target.value,
-                          })
-                        }
-                      />
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -1307,7 +1417,14 @@ const FollowUpList = ({
                               "completed",
                               "reschedule",
                               "cancelled",
-                            ].map((status) => (
+                            ]
+                              .filter((status) => {
+                                if (formData.id && formData.followup_status === "completed") {
+                                  return status === "completed";
+                                }
+                                return true;
+                              })
+                              .map((status) => (
                               <button
                                 key={status}
                                 type="button"

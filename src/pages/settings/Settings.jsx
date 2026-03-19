@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast as hotToast } from "react-hot-toast";
 import {
   User,
   Lock,
@@ -213,18 +214,14 @@ const Settings = ({
   const [adminToastMessage, setAdminToastMessage] = useState("");
   const [selectedImageFile, setSelectedImageFile] = useState(null);
 
-  // Generic toast state for all messages
-  const [toast, setToast] = useState({
-    show: false,
-    message: "",
-    type: "success", // success, error
-  });
+  // Removed generic toast state as react-hot-toast handles it globally
 
   const showToastMessage = (message, type = "success") => {
-    setToast({ show: true, message, type });
-    setTimeout(() => {
-      setToast({ show: false, message: "", type: "success" });
-    }, 3000);
+    if (type === "success") {
+      hotToast.success(message);
+    } else {
+      hotToast.error(message);
+    }
   };
 
   // Confirmation modal state
@@ -380,7 +377,10 @@ const Settings = ({
             privileges: 3,
           });
           setShowAddAdminForm(false);
-          showToastMessage(`Admin created successfully! Default password: ${defaultPassword}`, "success");
+          showToastMessage(
+            `Admin created successfully! Default password: ${defaultPassword}`,
+            "success",
+          );
           // Refresh the admin list
           fetchAdminUsers();
         } else {
@@ -849,13 +849,13 @@ const Settings = ({
                         Add and manage AI models for enquiry filtering.
                       </p>
                     </div>
-                    <button
+                    {/* <button
                       onClick={() => setShowAddModelForm(!showAddModelForm)}
                       className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all active:scale-95 text-[11px] font-bold tracking-wider shadow-lg"
                     >
                       <Plus size={16} />
                       ADD AI MODEL
-                    </button>
+                    </button> */}
                   </div>
 
                   {/* Add Model Form */}
@@ -1674,33 +1674,7 @@ const Settings = ({
         </div>
       </div>
 
-      {/* Generic Toast Notification */}
-      {toast.show && (
-        <div className="fixed top-6 right-6 z-50 animate-fade-in">
-          <div
-            className={`flex items-center gap-3 px-5 py-3 rounded-xl shadow-lg border min-w-[280px] ${
-              toast.type === "success"
-                ? "bg-primary text-white shadow-primary/30 border-white/10"
-                : "bg-red-500 text-white shadow-red-500/30 border-white/10"
-            }`}
-          >
-            <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
-                toast.type === "success" ? "bg-white/20" : "bg-white/20"
-              }`}
-            >
-              {toast.type === "success" ? (
-                <Check size={14} className="text-white" />
-              ) : (
-                <X size={14} className="text-white" />
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-bold tracking-wide">{toast.message}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Generic Toast Notification replaced by react-hot-toast */}
 
       {/* Confirmation Modal */}
       {confirmModal.show && (

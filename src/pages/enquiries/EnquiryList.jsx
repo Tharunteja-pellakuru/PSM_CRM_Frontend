@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { toast } from "react-hot-toast";
 import { createPortal } from "react-dom";
 import {
   Mail,
@@ -101,6 +102,8 @@ const EnquiryList = ({
   // store the *database record id* here; provider-specific modelId is
   // available as `model.modelId` on the objects in `aiModels`.
   const [selectedAiModel, setSelectedAiModel] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const RECORDS_PER_PAGE = 10;
   const [leadModalOpen, setLeadModalOpen] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -159,6 +162,11 @@ const EnquiryList = ({
       });
     }
   }, [selectedAiModel]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDate, endDate, activeTab, hideIrrelevant, selectedAiModel]);
 
   useEffect(() => {
     if (aiAnalysisEnabled && activeTab === "new" && !analysisLoopRef.current) {
@@ -295,6 +303,12 @@ const EnquiryList = ({
     return true;
   });
 
+  const totalPages = Math.ceil(filteredEnquiries.length / RECORDS_PER_PAGE);
+  const paginatedEnquiries = filteredEnquiries.slice(
+    (currentPage - 1) * RECORDS_PER_PAGE,
+    currentPage * RECORDS_PER_PAGE,
+  );
+
   const enquiriesInTab = enquiries.filter((e) => {
     const isIrrelevant =
       e.status === "irrelevant" || (e.aiAnalysis && !e.aiAnalysis.isRelevant);
@@ -373,8 +387,10 @@ const EnquiryList = ({
       onPromote(updatedEnquiry, selectedEnquiry.uuid);
       setLeadModalOpen(false);
       setSelectedEnquiry(null);
+      toast.success("Lead created successfully!");
     } catch (err) {
       console.log("Lead Creation Failed", err);
+      toast.error("Lead Creation Failed. Please try again.");
     }
   };
 
@@ -669,7 +685,7 @@ const EnquiryList = ({
       </div>
 
       <div className="flex flex-col gap-4 w-full">
-        {filteredEnquiries.length === 0 ? (
+        {paginatedEnquiries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 bg-white rounded-3xl border border-slate-200 shadow-sm w-full">
             <Inbox size={22} className="text-slate-200 mb-2" />
             <p className="text-[10px] font-bold text-slate-300  tracking-widest">
@@ -677,7 +693,7 @@ const EnquiryList = ({
             </p>
           </div>
         ) : (
-          filteredEnquiries.map((enquiry, idx) => (
+          paginatedEnquiries.map((enquiry, idx) => (
             <div
               key={`${enquiry.id}-${idx}`}
               className="group relative bg-white rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500 overflow-hidden p-4 w-full flex flex-col gap-4"
@@ -1248,6 +1264,59 @@ const EnquiryList = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-8 mb-4">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary disabled:opacity-30 disabled:hover:border-slate-200 disabled:hover:text-slate-400 transition-all shadow-sm active:scale-95"
+          >
+            <ChevronLeft size={16} strokeWidth={2.5} />
+          </button>
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl shadow-inner mx-2">
+            {[...Array(totalPages)].map((_, i) => {
+              const pageNum = i + 1;
+              // Show a limited range of pages if there are many
+              if (
+                totalPages > 7 &&
+                pageNum !== 1 &&
+                pageNum !== totalPages &&
+                Math.abs(pageNum - currentPage) > 1
+              ) {
+                if (pageNum === 2 || pageNum === totalPages - 1) {
+                  return <span key={pageNum} className="text-slate-300 px-1 font-bold">.</span>;
+                }
+                return null;
+              }
+
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`min-w-[32px] h-8 flex items-center justify-center rounded-lg text-[10px] font-black transition-all ${
+                    currentPage === pageNum
+                      ? "bg-[#18254D] text-white shadow-lg shadow-slate-300 scale-110"
+                      : "text-slate-400 hover:text-primary hover:bg-white"
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary disabled:opacity-30 disabled:hover:border-slate-200 disabled:hover:text-slate-400 transition-all shadow-sm active:scale-95"
+          >
+            <ChevronRight size={16} strokeWidth={2.5} />
+          </button>
         </div>
       )}
 

@@ -32,7 +32,7 @@ function StatCard({ title, value, trend, trendUp, icon, description }) {
   );
 }
 
-function Dashboard({ followUps, clients, leads = [], enquiries, aiModels = [], onSelectFollowUp, onNavigate, onClearNotifications }) {
+function Dashboard({ followUps, clients, leads = [], enquiries, aiModels = [], onSelectFollowUp, onNavigate, onClearNotifications, loading = false }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [selectedYear, setSelectedYear] = useState("2024");
   const [selectedMonth, setSelectedMonth] = useState("All");
@@ -97,6 +97,18 @@ function Dashboard({ followUps, clients, leads = [], enquiries, aiModels = [], o
   }
 
   const chartData = getChartData();
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full relative">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 import {
   Mail,
   Lock,
@@ -38,11 +39,15 @@ function LoginPage({ onLogin }) {
       const data = await res.json();
 
       if (res.ok) {
+        toast.success("Login successful!");
         onLogin(data);
       } else {
-        setError(data.message || "Invalid Email or Password");
+        const errorMsg = data.message || "Invalid Email or Password";
+        toast.error(errorMsg);
+        setError(errorMsg);
       }
     } catch {
+      toast.error("Server error. Please try again.");
       setError("Server error. Please try again.");
     }
 

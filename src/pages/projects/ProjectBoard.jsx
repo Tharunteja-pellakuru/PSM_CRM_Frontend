@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toast } from "react-hot-toast";
 import { createPortal } from "react-dom";
 // MOCK_PROJECTS and MOCK_CLIENTS are now passed as props
 import {
@@ -481,24 +482,30 @@ const ProjectBoard = ({
     e.preventDefault();
 
     if (!selectedClientId) {
-      alert("Please select an existing client.");
+      toast.error("Please select an existing client.");
       return;
     }
 
     // Create project using the selected existing client ID
     if (onAddProject) {
-      await onAddProject({
-        clientId: selectedClientId,
-        name: formData.projectName,
-        description: formData.projectDescription,
-        projectCategory: formData.projectCategory,
-        projectStatus: formData.projectStatus,
-        projectPriority: formData.projectPriority,
-        budget: formData.budget,
-        onboardingDate: formData.onboardingDate,
-        deadline: formData.deadline,
-        scopeDocument: formData.scopeDocument,
-      });
+      try {
+        await onAddProject({
+          clientId: selectedClientId,
+          name: formData.projectName,
+          description: formData.projectDescription,
+          projectCategory: formData.projectCategory,
+          projectStatus: formData.projectStatus,
+          projectPriority: formData.projectPriority,
+          budget: formData.budget,
+          onboardingDate: formData.onboardingDate,
+          deadline: formData.deadline,
+          scopeDocument: formData.scopeDocument,
+        });
+        toast.success("Project added successfully!");
+      } catch (error) {
+        toast.error("Failed to add project.");
+        console.error(error);
+      }
     }
 
     setShowAddModal(false);

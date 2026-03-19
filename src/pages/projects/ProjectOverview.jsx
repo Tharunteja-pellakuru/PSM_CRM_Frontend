@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toast } from "react-hot-toast";
 import {
   ArrowLeft,
   Calendar,
@@ -71,14 +72,21 @@ const ProjectOverview = ({
   // State for custom dropdowns
   const [activeDropdown, setActiveDropdown] = useState(null); // 'status', 'priority', 'category'
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (onUpdateProject && project?.id) {
-      onUpdateProject({
-        ...project,
-        ...formData,
-      });
+      try {
+        await onUpdateProject({
+          ...project,
+          ...formData,
+        });
+        toast.success("Project updated successfully!");
+        setIsEditing(false);
+      } catch (error) {
+        toast.error("Failed to update project.");
+      }
+    } else {
+      setIsEditing(false);
     }
-    setIsEditing(false);
   };
 
   const handleDownload = async (filename) => {

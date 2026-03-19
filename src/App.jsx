@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Toaster, toast } from "react-hot-toast";
 import {
   BrowserRouter,
   Routes,
@@ -43,10 +44,23 @@ function ClientDetailWrapper({
   onAddActivity,
   onSelectProject,
   projects,
+  loading,
 }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center h-[calc(100vh-100px)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500">Loading details...</p>
+        </div>
+      </div>
+    );
+  }
+
   const client = clients.find((c) => c.id == id);
 
   if (!client) return <Navigate to={`/${type}`} replace />;
@@ -72,9 +86,22 @@ function ProjectOverviewWrapper({
   clients,
   followUps,
   onUpdateProject,
+  loading,
 }) {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center h-[calc(100vh-100px)]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500">Loading project...</p>
+        </div>
+      </div>
+    );
+  }
+
   const project = projects.find((p) => p.id == id);
 
   if (!project) return <Navigate to="/projects" replace />;
@@ -101,14 +128,18 @@ function AppRoutes() {
   });
 
   // Data states
-  const [clients, setClients] = useState(MOCK_CLIENTS);
+  const [clients, setClients] = useState([]);
   const [enquiries, setEnquiries] = useState(MOCK_ENQUIRIES);
-  const [followUps, setFollowUps] = useState(MOCK_FOLLOW_UPS);
-  const [activities, setActivities] = useState(MOCK_ACTIVITIES);
-  const [projects, setProjects] = useState(MOCK_PROJECTS);
+  const [followUps, setFollowUps] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [aiModels, setAiModels] = useState([]);
   const [leads, setLeads] = useState([]);
+  
   const [leadsLoading, setLeadsLoading] = useState(true);
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [followUpsLoading, setFollowUpsLoading] = useState(true);
 
   // Fetch AI models on mount
   useEffect(() => {
@@ -125,6 +156,7 @@ function AppRoutes() {
             name: m.name,
             provider: m.provider,
             modelId: m.model_id,
+            apiKey: m.api_key,
             isDefault: m.is_default,
           })),
         );
@@ -166,7 +198,7 @@ function AppRoutes() {
             lead.website_url?.replace(/^https?:\/\//, "").split("/")[0] || "",
           email: lead.email || "",
           phone: lead.phone_number || "",
-          status: lead.lead_status === "Dismissed" ? "Dismissed" : "Lead",
+          status: lead.lead_status === "Dismissed" ? "Dismissed" : (lead.lead_status === "Converted" ? "Active" : "Lead"),
           isConverted: lead.lead_status === "Converted",
           leadType: lead.lead_status || "Warm",
           projectCategory: lead.lead_category || 1,
@@ -206,26 +238,35 @@ function AppRoutes() {
   useEffect(() => {
     if (!isLoggedIn) {
       setFollowUps([]);
+      setFollowUpsLoading(false);
       return;
     }
 
+    setFollowUpsLoading(true);
     fetch(`${BASE_URL}/api/get-followups`, {
       headers: getAuthHeaders(),
     })
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         setFollowUps(data);
+        setFollowUpsLoading(false);
       })
-      .catch(() => console.log("Failed to fetch followups"));
+      .catch(() => {
+        console.log("Failed to fetch followups");
+        setFollowUps([]);
+        setFollowUpsLoading(false);
+      });
   }, [isLoggedIn]);
 
   // Fetch clients from API
   useEffect(() => {
     if (!isLoggedIn) {
       setClients([]);
+      setClientsLoading(false);
       return;
     }
 
+    setClientsLoading(true);
     fetch(`${BASE_URL}/api/get-clients`, {
       headers: getAuthHeaders(),
     })
@@ -256,17 +297,24 @@ function AppRoutes() {
           );
           return [...transformedClients, ...leads];
         });
+        setClientsLoading(false);
       })
-      .catch(() => console.log("Failed to fetch clients"));
+      .catch(() => {
+        console.log("Failed to fetch clients");
+        setClients([]);
+        setClientsLoading(false);
+      });
   }, [isLoggedIn]);
 
   // Fetch projects from API
   useEffect(() => {
     if (!isLoggedIn) {
       setProjects([]);
+      setProjectsLoading(false);
       return;
     }
 
+    setProjectsLoading(true);
     fetch(`${BASE_URL}/api/get-projects`, {
       headers: getAuthHeaders(),
     })
@@ -289,8 +337,13 @@ function AppRoutes() {
           progress: 0, // Calculate or add to table if needed
         }));
         setProjects(transformedProjects);
+        setProjectsLoading(false);
       })
-      .catch(() => console.log("Failed to fetch projects"));
+      .catch(() => {
+        console.log("Failed to fetch projects");
+        setProjects([]);
+        setProjectsLoading(false);
+      });
   }, [isLoggedIn]);
 
   // Simple handlers
@@ -309,6 +362,15 @@ function AppRoutes() {
   }
 
   function handleClientSelect(client, tab = "overview") {
+    // If it's a converted lead, we should redirect to the associated client detail page
+    if (client.isConverted) {
+      const associatedClient = clients.find((c) => c.lead_id == client.id);
+      if (associatedClient) {
+        navigate(`/clients/${associatedClient.id}`, { state: { tab } });
+        return;
+      }
+    }
+
     // Both active leads and dismissed leads should use the "leads" route
     const route =
       client.status === "Lead" || client.status === "Dismissed"
@@ -349,11 +411,11 @@ function AppRoutes() {
       } else {
         const errorData = await res.json();
         console.error("Failed to delete lead:", errorData);
-        alert("Failed to delete lead. Please try again.");
+        toast.error("Failed to delete lead. Please try again.");
       }
     } catch (e) {
       console.error("Error deleting lead:", e);
-      alert("An error occurred while deleting lead.");
+      toast.error("An error occurred while deleting lead.");
     }
   }
 
@@ -419,12 +481,12 @@ function AppRoutes() {
           return newLead;
         } else {
           console.error("Failed to add lead:", await res.json());
-          alert("Failed to add lead. Please try again.");
+          toast.error("Failed to add lead. Please try again.");
           return null;
         }
       } catch (err) {
         console.error("Error adding lead:", err);
-        alert("An error occurred while adding lead.");
+        toast.error("An error occurred while adding lead.");
         return null;
       }
     } else {
@@ -467,12 +529,12 @@ function AppRoutes() {
           return newClient;
         } else {
           console.error("Failed to add client:", await res.json());
-          alert("Failed to add client. Please try again.");
+          toast.error("Failed to add client. Please try again.");
           return null;
         }
       } catch (err) {
         console.error("Error adding client:", err);
-        alert("An error occurred while adding client.");
+        toast.error("An error occurred while adding client.");
         return null;
       }
     }
@@ -585,7 +647,7 @@ function AppRoutes() {
       return { success: true };
     } catch (error) {
       console.error("Conversion error:", error);
-      alert("Failed to convert lead to client: " + error.message);
+      toast.error("Failed to convert lead to client: " + error.message);
       return { success: false };
     }
   }
@@ -612,7 +674,7 @@ function AppRoutes() {
         country: data.country,
         lead_status: "Converted",
         website_url: data.website || "",
-        message: data.notes || "",
+        message: data.projectDescription || data.notes || "",
       };
 
       const leadRes = await fetch(`${BASE_URL}/api/update-lead/${id}`, {
@@ -623,68 +685,23 @@ function AppRoutes() {
 
       if (!leadRes.ok) throw new Error("Failed to update lead details");
 
-      // 3. Update Client Details (Organisation, State, Currency)
-      const clientPayload = {
-        organisation_name: data.organisationName,
-        client_name: data.name,
-        client_country: data.country,
-        client_state: data.state,
-        client_currency: data.currency,
-        client_status: data.clientStatus || "Active",
-      };
-
-      const clientRes = await fetch(`${BASE_URL}/api/update-client/${client.id}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(clientPayload),
-      });
-
-      if (!clientRes.ok) throw new Error("Failed to update client details");
-
-      // 4. Update Project Details if project exists
-      if (project) {
-        const projectPayload = {
-          project_name: data.projectName,
-          project_description: data.projectDescription,
-          project_category: data.projectCategory,
-          project_status: data.projectStatus,
-          project_priority: data.projectPriority,
-          project_budget: parseInt(data.projectBudget),
-          onboarding_date: data.onboardingDate,
-          deadline_date: data.deadline,
-        };
-
-        const projectRes = await fetch(`${BASE_URL}/api/update-project/${project.id}`, {
-          method: "PUT",
-          headers: getAuthHeaders(),
-          body: JSON.stringify(projectPayload),
-        });
-
-        if (!projectRes.ok) throw new Error("Failed to update project details");
-      }
-
-      // 5. Update local states
+      // 3. Update local states
       // Update Leads
       setLeads((prev) =>
-        prev.map((l) => (l.id == id ? { ...l, ...data, isConverted: true, leadType: "Converted" } : l))
+        prev.map((l) =>
+          l.id == id
+            ? { ...l, ...data, status: "Active", isConverted: true, leadType: "Converted" }
+            : l,
+        ),
       );
 
-      // Update Clients
-      setClients((prev) =>
-        prev.map((c) => (c.lead_id == id ? { ...c, ...data, company: data.organisationName } : c))
-      );
-
-      // Update Projects
-      if (project) {
-        setProjects((prev) =>
-          prev.map((p) => (p.clientId == client.id ? { ...p, ...data, name: data.projectName, budget: data.projectBudget } : p))
-        );
-      }
+      // We no longer update Clients or Projects tables/states from this modal
+      // as per user request to only update the Leads table.
 
       return { success: true };
     } catch (error) {
       console.error("Update error:", error);
-      alert("Failed to update converted lead: " + error.message);
+      toast.error("Failed to update converted lead: " + error.message);
       return { success: false };
     }
   }
@@ -746,11 +763,11 @@ function AppRoutes() {
       } else {
         const errorData = await res.json();
         console.error("Failed to dismiss lead:", errorData);
-        alert("Failed to dismiss lead. Please try again.");
+        toast.error("Failed to dismiss lead. Please try again.");
       }
     } catch (e) {
       console.error("Error dismissing lead:", e);
-      alert("An error occurred while dismissing lead.");
+      toast.error("An error occurred while dismissing lead.");
     }
   }
 
@@ -808,11 +825,11 @@ function AppRoutes() {
       } else {
         const errorData = await res.json();
         console.error("Failed to restore lead:", errorData);
-        alert("Failed to restore lead. Please try again.");
+        toast.error("Failed to restore lead. Please try again.");
       }
     } catch (e) {
       console.error("Error restoring lead:", e);
-      alert("An error occurred while restoring lead.");
+      toast.error("An error occurred while restoring lead.");
     }
   }
 
@@ -912,6 +929,7 @@ function AppRoutes() {
         setLeads((prev) => prev.map((l) => (l.id == id ? leadToUpdate : l)));
         setClients((prev) => prev.map((c) => (c.id == id ? leadToUpdate : c)));
         const errorData = await res.json();
+        toast.error(errorData.message || "Failed to update lead");
         throw new Error(errorData.message || "Failed to update lead");
       }
 
@@ -935,7 +953,8 @@ function AppRoutes() {
 
       return finalLead;
     } catch (error) {
-      console.error("Error updating lead:", error);
+      console.error("Error updating client:", error);
+      toast.error("Failed to update client.");
       throw error;
     }
   }
@@ -985,15 +1004,121 @@ function AppRoutes() {
         };
 
         setProjects([newProject, ...projects]);
+        toast.success("Project added successfully!");
         return newProject;
       } else {
         console.error("Failed to add project:", await res.json());
-        alert("Failed to add project. Please try again.");
+        toast.error("Failed to add project. Please try again.");
         return null;
       }
     } catch (err) {
       console.error("Error adding project:", err);
-      alert("An error occurred while adding project.");
+      toast.error("An error occurred while adding project.");
+      return null;
+    }
+  }
+
+  async function handleOnboardClient(clientData, projectData) {
+    try {
+      // 1. Create the client
+      const clientRes = await fetch(`${BASE_URL}/api/add-client`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(clientData),
+      });
+
+      if (!clientRes.ok) {
+        const errorData = await clientRes.json();
+        console.error("Failed to onboard client:", errorData);
+        toast.error(errorData.message || "Failed to onboard client.");
+        return null;
+      }
+
+      const clientResult = await clientRes.json();
+      const createdClient = clientResult.client;
+
+      const newClient = {
+        id: createdClient.id.toString(),
+        name: createdClient.full_name,
+        company: createdClient.website_url
+          ? createdClient.website_url.replace(/^https?:\/\//, "").split("/")[0]
+          : "",
+        email: createdClient.email,
+        phone: createdClient.phone_number,
+        status: "Client",
+        leadType: createdClient.lead_status,
+        isConverted: createdClient.lead_status === "Converted",
+        avatar: `https://picsum.photos/100/100?random=${clients.length + 10}`,
+        joinedDate: createdClient.created_at.split("T")[0],
+        lastContact: createdClient.updated_at.split("T")[0],
+        industry: createdClient.lead_category,
+        country: createdClient.country,
+        notes: createdClient.message,
+        website: createdClient.website_url,
+        organisationName: createdClient.organisation_name,
+        clientStatus: createdClient.client_status,
+      };
+
+      setClients((prev) => [newClient, ...prev]);
+      setLeads((prev) => prev.filter((l) => l.id != clientData.id)); // Remove from leads if it was a lead
+
+      // 2. If project data is provided, create the project
+      if (projectData) {
+        const projectFormData = new FormData();
+        projectFormData.append("project_name", projectData.name);
+        projectFormData.append("project_description", projectData.description || "");
+        projectFormData.append("project_category", projectData.projectCategory || 1);
+        projectFormData.append("project_status", projectData.projectStatus || "Planning");
+        projectFormData.append("project_priority", projectData.projectPriority || "High");
+        projectFormData.append("project_budget", parseInt(projectData.budget) || 0);
+        projectFormData.append("onboarding_date", projectData.onboardingDate || new Date().toISOString().split("T")[0]);
+        projectFormData.append("deadline_date", projectData.deadline || "");
+        projectFormData.append("client_id", newClient.id); // Use the newly created client's ID
+
+        if (projectData.scopeDocument instanceof File) {
+          projectFormData.append("scope_document", projectData.scopeDocument);
+        } else if (projectData.scopeDocument) {
+          projectFormData.append("scope_document", projectData.scopeDocument);
+        }
+
+        const projectRes = await fetch(`${BASE_URL}/api/add-project`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: projectFormData,
+        });
+
+        if (projectRes.ok) {
+          const projectResult = await projectRes.json();
+          const createdProject = projectResult.project;
+          const newProject = {
+            id: createdProject.project_id.toString(),
+            projectName: createdProject.project_name,
+            projectDescription: createdProject.project_description,
+            projectStatus: createdProject.project_status,
+            projectCategory: createdProject.project_category,
+            projectPriority: createdProject.project_priority,
+            budget: createdProject.project_budget,
+            onboardingDate: createdProject.onboarding_date,
+            deadline: createdProject.deadline_date,
+            scopeDocument: createdProject.scope_document,
+            clientId: createdProject.client_id.toString(),
+          };
+          setProjects((prev) => [newProject, ...prev]);
+          toast.success("Project created successfully!");
+        } else {
+          const projectErrorData = await projectRes.json();
+          console.error("Failed to add project during onboarding:", projectErrorData);
+          toast.error("Client created, but failed to create project.");
+        }
+      }
+
+      toast.success("Client onboarded successfully!");
+      return newClient;
+    } catch (err) {
+      console.error("Error onboarding client:", err);
+      toast.error("An error occurred during onboarding.");
       return null;
     }
   }
@@ -1034,14 +1159,15 @@ function AppRoutes() {
           scopeDocument: result.project?.scope_document || updated.scopeDocument
         };
         setProjects((prev) => prev.map((p) => (p.id == updated.id ? updatedProject : p)));
+        toast.success("Project updated successfully!");
       } else {
         const errorData = await res.json();
         console.error("Failed to update project:", errorData);
-        alert("Failed to update project. Rolling back...");
+        toast.error("Failed to update project. Rolling back...");
       }
     } catch (err) {
       console.error("Error updating project:", err);
-      alert("An error occurred while updating project.");
+      toast.error("An error occurred while updating project.");
     }
   }
 
@@ -1066,11 +1192,14 @@ function AppRoutes() {
           dueDate: result.followup.followup_date,
         };
         setFollowUps((prev) => [...prev, newFollowup]);
+        toast.success("Follow-up added successfully!");
       } else {
         console.error("Failed to add follow-up:", await res.json());
+        toast.error("Failed to add follow-up.");
       }
     } catch (err) {
       console.error("Error adding follow-up:", err);
+      toast.error("An error occurred while adding follow-up.");
     }
   }
 
@@ -1086,11 +1215,14 @@ function AppRoutes() {
         setFollowUps((prev) =>
           prev.map((f) => (f.id == updated.id ? updated : f)),
         );
+        toast.success("Follow-up updated successfully!");
       } else {
         console.error("Failed to update follow-up:", await res.json());
+        toast.error("Failed to update follow-up.");
       }
     } catch (err) {
       console.error("Error updating follow-up:", err);
+      toast.error("An error occurred while updating follow-up.");
     }
   }
 
@@ -1103,11 +1235,14 @@ function AppRoutes() {
 
       if (res.ok) {
         setFollowUps((prev) => prev.filter((f) => f.id != id));
+        toast.success("Follow-up deleted successfully!");
       } else {
         console.error("Failed to delete follow-up:", await res.json());
+        toast.error("Failed to delete follow-up.");
       }
     } catch (err) {
       console.error("Error deleting follow-up:", err);
+      toast.error("An error occurred while deleting follow-up.");
     }
   }
 
@@ -1147,11 +1282,14 @@ function AppRoutes() {
               : f,
           ),
         );
+        toast.success(`Follow-up marked as ${nextStatus}!`);
       } else {
         console.error("Failed to toggle follow-up status:", await res.json());
+        toast.error("Failed to toggle follow-up status.");
       }
     } catch (err) {
       console.error("Error toggling follow-up status:", err);
+      toast.error("An error occurred while toggling follow-up status.");
     }
   }
 
@@ -1219,9 +1357,13 @@ function AppRoutes() {
       if (res.ok) {
         const data = await res.json();
         setAiModels([...aiModels, { ...model, id: data.id }]);
+        toast.success("AI model added successfully!");
+      } else {
+        toast.error("Failed to add AI model.");
       }
     } catch (e) {
       console.log("Failed to add AI model");
+      toast.error("An error occurred while adding AI model.");
     }
   }
 
@@ -1234,9 +1376,13 @@ function AppRoutes() {
       });
       if (res.ok) {
         setAiModels(aiModels.map((m) => (m.id == updated.id ? updated : m)));
+        toast.success("AI model updated successfully!");
+      } else {
+        toast.error("Failed to update AI model.");
       }
     } catch (e) {
       console.log("Failed to update AI model");
+      toast.error("An error occurred while updating AI model.");
     }
   }
 
@@ -1246,9 +1392,15 @@ function AppRoutes() {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
-      if (res.ok) setAiModels(aiModels.filter((m) => m.id != id));
+      if (res.ok) {
+        setAiModels(aiModels.filter((m) => m.id != id));
+        toast.success("AI model deleted successfully!");
+      } else {
+        toast.error("Failed to delete AI model.");
+      }
     } catch (e) {
       console.log("Failed to delete AI model");
+      toast.error("An error occurred while deleting AI model.");
     }
   }
 
@@ -1256,12 +1408,14 @@ function AppRoutes() {
   const followUpProps = {
     followUps,
     clients,
+    loading: followUpsLoading,
     onToggleStatus: handleToggleFollowUpStatus,
     onAddFollowUp: handleAddFollowUp,
     onEditFollowUp: handleEditFollowUp,
     onDeleteFollowUp: handleDeleteFollowUp,
     onSelectClient: handleClientSelect,
     onNavigate: (tab) => navigate(`/${tab}`),
+    projects: projects,
   };
 
   return (
@@ -1302,6 +1456,7 @@ function AppRoutes() {
               leads={leads}
               enquiries={enquiries}
               aiModels={aiModels}
+              loading={leadsLoading || clientsLoading || followUpsLoading || projectsLoading}
               onSelectFollowUp={handleClientSelect}
               onViewAllFollowUps={() => navigate("/followups")}
               onNavigate={(tab) => navigate(`/${tab}`)}
@@ -1385,6 +1540,7 @@ function AppRoutes() {
           element={
             <ClientList
               clients={clients.filter((c) => c.status === "Active")}
+              loading={clientsLoading}
               onSelectClient={handleClientSelect}
               onDeleteClient={handleDeleteClient}
               onAddClient={handleAddClient}
@@ -1398,6 +1554,7 @@ function AppRoutes() {
           element={
             <ProjectBoard
               projects={projects}
+              loading={projectsLoading}
               clients={clients}
               onAddClient={handleAddClient}
               onAddProject={handleAddProject}
@@ -1430,6 +1587,7 @@ function AppRoutes() {
               onAddActivity={handleAddActivity}
               onSelectProject={handleProjectSelect}
               projects={projects}
+              loading={clientsLoading}
             />
           }
         />
@@ -1446,6 +1604,7 @@ function AppRoutes() {
               onAddActivity={handleAddActivity}
               onSelectProject={handleProjectSelect}
               projects={projects}
+              loading={leadsLoading}
             />
           }
         />
@@ -1458,6 +1617,7 @@ function AppRoutes() {
               clients={clients}
               followUps={followUps}
               onUpdateProject={handleUpdateProject}
+              loading={projectsLoading || clientsLoading}
             />
           }
         />
@@ -1471,6 +1631,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" />
       <AppRoutes />
     </BrowserRouter>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toast } from "react-hot-toast";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -52,6 +53,7 @@ const ClientList = ({
   onAddActivity,
   allClients = [],
   title = "Clients",
+  loading = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
@@ -338,25 +340,42 @@ const ClientList = ({
         company: formData.company || "Independent",
         industry: formData.industry || "Unknown",
       };
-      await onAddClient(submissionData);
-      setShowAddModal(false);
-      setFormData({
-        name: "",
-        company: "",
-        email: "",
-        phone: "",
-        status: "Active",
-        leadType: undefined,
-        industry: "",
-        notes: "",
-        projectName: "",
-        projectStatus: "Planning",
-        projectCategory: 1,
-        projectPriority: "Medium",
-        projectDescription: "",
-      });
+      try {
+        await onAddClient(submissionData);
+        setShowAddModal(false);
+        setFormData({
+          name: "",
+          company: "",
+          email: "",
+          phone: "",
+          status: "Active",
+          leadType: undefined,
+          industry: "",
+          notes: "",
+          projectName: "",
+          projectStatus: "Planning",
+          projectCategory: 1,
+          projectPriority: "Medium",
+          projectDescription: "",
+        });
+        toast.success("Client added successfully!");
+      } catch (error) {
+        toast.error("Failed to add client.");
+      }
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-500">Loading {title.toLowerCase()}...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full relative">

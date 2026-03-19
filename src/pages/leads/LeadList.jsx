@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toast } from "react-hot-toast";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -306,8 +307,12 @@ const LeadList = ({
         if (result.success) {
           setShowEditConvertedModal(false);
           setEditingConvertedLeadId(null);
+          toast.success("Converted lead updated successfully!");
+        } else {
+          toast.error("Failed to update converted lead.");
         }
       } catch (error) {
+        toast.error("Error updating converted lead.");
         console.error("Failed to update converted lead:", error);
       }
     }
@@ -338,10 +343,12 @@ const LeadList = ({
           country: "",
           state: "",
           currency: "",
-          organisationName: "",
+          organizationName: "",
           clientStatus: "Active",
         });
+        toast.success("Lead onboarded successfully!");
       } catch (error) {
+        toast.error("Failed to onboard lead.");
         console.error("Failed to onboard lead:", error);
       }
     }
@@ -650,6 +657,7 @@ const LeadList = ({
               />
             </div>
 
+            {leadView !== "Converted" && leadView !== "Dismissed" && (
             <div className="min-w-[160px] flex-1 shrink-0 relative z-50">
               <button
                 ref={tierButtonRef}
@@ -702,6 +710,7 @@ const LeadList = ({
                   document.body,
                 )}
             </div>
+            )}
 
             {/* Category Dropdown */}
             <div className="min-w-[160px] flex-1 shrink-0 relative z-50">
@@ -735,7 +744,7 @@ const LeadList = ({
                       className="category-dropdown bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden z-[9999] animate-fade-in-up origin-top"
                       style={categoryDropdownStyle}
                     >
-                      {["All", 1, 2, 3].map((catId) => (
+                      {["All", 1, 2].map((catId) => (
                         <button
                           key={catId}
                           onClick={() => {
@@ -850,6 +859,7 @@ const LeadList = ({
                           ? "bg-slate-50/30 opacity-80 cursor-default"
                           : "hover:bg-slate-50/50 cursor-pointer"
                       }`}
+                      style={{ cursor: lead.status !== "Dismissed" ? "pointer" : "default" }}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-6">
@@ -1234,7 +1244,7 @@ const LeadList = ({
                   <input
                     required
                     type="tel"
-                    placeholder="e.g. +91 98765 43210"
+                    placeholder="e.g.  98765 43210"
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium"
                     value={formData.phone}
                     onChange={(e) =>
@@ -1650,7 +1660,7 @@ const LeadList = ({
                           !isOnboardClientStatusDropdownOpen,
                         )
                       }
-                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold shadow-sm hover:border-secondary transition-all"
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm shadow-sm hover:border-secondary transition-all"
                     >
                       <span className="text-primary truncate">
                         {onboardingData.clientStatus}

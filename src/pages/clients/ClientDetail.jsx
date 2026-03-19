@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { toast } from "react-hot-toast";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -111,13 +112,30 @@ const ClientDetail = ({
       // Try to extract country code from the phone number
       if (localPhone.startsWith("+")) {
         // Find the matching country code from countries list
-        const matchingCountry = countries
+        const matchingCountry = [...countries]
           .sort((a, b) => b.code.length - a.code.length) // Sort by length descending to match longest code first (e.g., +1-242 before +1)
           .find((c) => localPhone.startsWith(c.code));
 
         if (matchingCountry) {
           usedCountryCode = matchingCountry.code;
           localPhone = localPhone.substring(usedCountryCode.length).trim();
+        }
+      }
+
+      // If no country code found from phone, try to derive from client.country
+      if (!usedCountryCode && client.country) {
+        // Check if client.country is itself a country code (e.g., "+91")
+        const countryByCode = countries.find((c) => c.code === client.country);
+        if (countryByCode) {
+          usedCountryCode = countryByCode.code;
+        } else {
+          // Check if client.country is a country name (e.g., "India")
+          const countryByName = countries.find(
+            (c) => c.name.toLowerCase() === client.country.toLowerCase()
+          );
+          if (countryByName) {
+            usedCountryCode = countryByName.code;
+          }
         }
       }
 
@@ -144,15 +162,41 @@ const ClientDetail = ({
   const [logData, setLogData] = useState({
     type: "call",
     description: "",
-    projectName: "",
+    projectId: "",
     date: new Date().toISOString().split("T")[0],
     time: new Date().toTimeString().split(" ")[0].substring(0, 5),
   });
 
+  const [clientFollowUps, setClientFollowUps] = useState([]);
+
+  useEffect(() => {
+    if (client && client.id) {
+       fetchClientFollowups();
+    }
+  }, [client]);
+
+  const fetchClientFollowups = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/client-followups/${client.id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClientFollowUps(data);
+      }
+    } catch (error) {
+      console.error("Error fetching client followups:", error);
+    }
+  };
+
   const clientProjects = projects.filter((p) => p.clientId == client.id);
-  const clientActivities = activities.filter((a) => a.clientId === client.id);
-  const completedFollowUps = followUps.filter(
-    (f) => f.clientId == client.id && f.status === "completed",
+  const clientActivities = activities.filter(
+    (a) => a.clientId == client.id || (client.lead_id && a.clientId == client.lead_id),
+  );
+  const completedFollowUps = clientFollowUps.filter(
+    (f) => f.status === "completed",
   );
 
   const handleLogInteraction = (e) => {
@@ -163,12 +207,14 @@ const ClientDetail = ({
         clientId: client.id,
         type: logData.type,
         description: logData.description,
+        projectName: clientProjects.find(p => p.id === logData.projectId)?.name || "",
+        projectId: logData.projectId,
         date: combinedDateTime.toISOString(),
       });
       setLogData({
-        type: "call",
+        ...logData,
         description: "",
-        projectName: "",
+        projectId: "",
         date: new Date().toISOString().split("T")[0],
         time: new Date().toTimeString().split(" ")[0].substring(0, 5),
       });
@@ -299,12 +345,12 @@ const ClientDetail = ({
 
                         await onUpdateClient(client.id, formDataToSubmit);
 
-                        console.log("Lead updated successfully!");
+                        toast.success("Details updated successfully!");
                         console.log("=== END DEBUG ===");
                         setShowEditModal(false);
                       } catch (error) {
                         console.error("Failed to update lead:", error);
-                        alert("Failed to update lead. Please try again.");
+                        toast.error("Failed to update lead. Please try again.");
                       }
                     }
                   }}
@@ -742,11 +788,11 @@ const ClientDetail = ({
                       <select
                         required
                         className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-secondary/10 focus:border-secondary focus:outline-none text-sm font-medium appearance-none cursor-pointer"
-                        value={logData.projectName}
+                        value={logData.projectId}
                         onChange={(e) =>
                           setLogData({
                             ...logData,
-                            projectName: e.target.value,
+                            projectId: e.target.value,
                           })
                         }
                       >
@@ -755,7 +801,7 @@ const ClientDetail = ({
                         </option>
                         {clientProjects.length > 0 ? (
                           clientProjects.map((project) => (
-                            <option key={project.id} value={project.name}>
+                            <option key={project.id} value={project.id}>
                               {project.name}
                             </option>
                           ))
@@ -1252,182 +1298,218 @@ const ClientDetail = ({
                   ) : (
                     /* Client: Project-wise conversations */
                     (() => {
-                      const projectConversations = [
-                        {
-                          projectName: client.projectName || "Website Redesign",
-                          projectStatus: "Active",
-                          conversations: [
-                            {
-                              id: "pc1",
-                              type: "meeting",
-                              date: "2026-03-01T10:00:00",
-                              description:
-                                "Discussed new landing page wireframes and finalized color scheme. Client approved the hero section layout.",
-                            },
-                            {
-                              id: "pc2",
-                              type: "call",
-                              date: "2026-02-25T14:30:00",
-                              description:
-                                "Follow-up call regarding mobile responsiveness. Client requested tablet breakpoint adjustments.",
-                            },
-                            {
-                              id: "pc3",
-                              type: "email",
-                              date: "2026-02-20T09:15:00",
-                              description:
-                                "Shared updated design mockups for review. Awaiting feedback on the navigation structure.",
-                            },
-                          ],
-                        },
-                        {
-                          projectName: "SEO Optimization",
-                          projectStatus: "In Progress",
-                          conversations: [
-                            {
-                              id: "pc4",
-                              type: "call",
-                              date: "2026-02-28T11:00:00",
-                              description:
-                                "Reviewed keyword strategy and content plan for Q2. Agreed on targeting 15 high-priority keywords.",
-                            },
-                            {
-                              id: "pc5",
-                              type: "email",
-                              date: "2026-02-22T16:45:00",
-                              description:
-                                "Sent monthly SEO performance report. Organic traffic up 23% from last month.",
-                            },
-                          ],
-                        },
-                        {
-                          projectName: "Brand Identity",
-                          projectStatus: "Completed",
-                          conversations: [
-                            {
-                              id: "pc6",
-                              type: "meeting",
-                              date: "2026-02-15T10:00:00",
-                              description:
-                                "Final brand guideline presentation. Client signed off on all deliverables.",
-                            },
-                          ],
-                        },
+                      // 1. Initialize result with actual projects for this client
+                      const projectGroups = clientProjects.map(p => ({
+                        id: p.id,
+                        projectName: p.name,
+                        projectStatus: p.status,
+                        interactions: []
+                      }));
+
+                      // 2. Add an "Other / General" group for interactions without a project
+                      const generalInteractions = [];
+
+                      // 3. Helper to find or add to group
+                      const addToGroup = (interaction) => {
+                        const targetProject = projectGroups.find(
+                          (p) => 
+                            (interaction.projectId && p.id == interaction.projectId) ||
+                            (interaction.projectName && p.projectName === interaction.projectName)
+                        );
+                        if (targetProject) {
+                           targetProject.interactions.push(interaction);
+                        } else {
+                           generalInteractions.push(interaction);
+                        }
+                      };
+
+                      // 4. Distribute real activities
+                      clientActivities.forEach(a => addToGroup({
+                        id: a.id,
+                        type: a.type,
+                        date: a.date,
+                        description: a.description,
+                        projectName: a.projectName,
+                        projectId: a.projectId,
+                        source: 'activity'
+                      }));
+
+                      // 5. Distribute completed follow-ups (Summaries)
+                      completedFollowUps.forEach(f => addToGroup({
+                        id: `fu-${f.id}`,
+                        type: (f.followup_mode || 'call').toLowerCase(),
+                        date: f.completed_at || f.dueDate,
+                        description: f.follow_brief || "No summary provided",
+                        originalDescription: f.description,
+                        title: f.title,
+                        completedBy: f.completed_by,
+                        projectName: f.projectName,
+                        projectId: f.projectId,
+                        source: 'followup'
+                      }));
+
+                      const allGroups = [
+                        ...projectGroups,
+                        ...(generalInteractions.length > 0 ? [{
+                          projectName: "General / Other",
+                          projectStatus: "N/A",
+                          interactions: generalInteractions
+                        }] : [])
                       ];
 
-                      // Merge real activities into the first project
-                      if (clientActivities.length > 0) {
-                        projectConversations[0].conversations = [
-                          ...clientActivities.map((a) => ({
-                            id: a.id,
-                            type: a.type,
-                            date: a.date,
-                            description: a.description,
-                          })),
-                          ...projectConversations[0].conversations,
-                        ];
-                      }
-
-                      return projectConversations.map((project, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm"
-                        >
-                          {/* Project Header */}
-                          <div className="flex items-center justify-between p-4 bg-slate-50/50 border-b border-slate-100">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-sm ${
-                                  project.projectStatus === "Active"
-                                    ? "bg-secondary"
-                                    : project.projectStatus === "Completed"
-                                      ? "bg-success"
-                                      : "bg-info"
-                                }`}
-                              >
-                                <Briefcase size={14} strokeWidth={2.5} />
-                              </div>
-                              <div>
-                                <h4 className="text-xs font-bold text-primary tracking-tight">
-                                  {project.projectName}
-                                </h4>
-                                <p className="text-[9px] font-bold text-slate-400  tracking-widest">
-                                  {project.conversations.length} conversations
-                                </p>
-                              </div>
+                      return (
+                        <div className="space-y-4">
+                          {allGroups.length === 0 ? (
+                            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm p-8 text-center">
+                              <p className="text-[10px] font-bold text-slate-300 tracking-widest uppercase">
+                                No conversations logged yet
+                              </p>
                             </div>
-                            <span
-                              className={`px-2.5 py-1 rounded-lg text-[8px] font-bold  tracking-widest border ${
-                                project.projectStatus === "Active"
-                                  ? "bg-secondary/10 text-secondary border-secondary/20"
-                                  : project.projectStatus === "Completed"
-                                    ? "bg-success/10 text-success border-success/20"
-                                    : "bg-info/10 text-info border-info/20"
-                              }`}
-                            >
-                              {project.projectStatus}
-                            </span>
-                          </div>
-
-                          {/* Conversations Timeline */}
-                          <div className="p-4">
-                            <div className="relative border-l-2 border-slate-100 ml-3 space-y-4">
-                              {project.conversations.map((conv) => (
-                                <div key={conv.id} className="ml-6 relative">
-                                  <div
-                                    className={`absolute -left-[33px] w-6 h-6 rounded-lg flex items-center justify-center text-white shadow-sm z-10 ${
-                                      conv.type === "email"
-                                        ? "bg-info"
-                                        : conv.type === "call"
-                                          ? "bg-success"
-                                          : conv.type === "meeting"
-                                            ? "bg-secondary"
+                          ) : (
+                            allGroups.map((group, groupIdx) => (
+                              <div
+                                key={`group-${groupIdx}`}
+                                className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mb-6"
+                              >
+                                {/* Project Header */}
+                                <div className="flex items-center justify-between p-4 bg-slate-50/50 border-b border-slate-100">
+                                  <div className="flex items-center gap-3">
+                                    <div
+                                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-sm ${
+                                        group.projectStatus === "Active" || group.projectStatus === "Planning"
+                                          ? "bg-secondary"
+                                          : group.projectStatus === "Completed"
+                                            ? "bg-success"
                                             : "bg-slate-400"
-                                    }`}
-                                  >
-                                    {conv.type === "call" ? (
-                                      <Phone size={11} strokeWidth={2.5} />
-                                    ) : conv.type === "meeting" ? (
-                                      <Calendar size={11} strokeWidth={2.5} />
-                                    ) : (
-                                      <Mail size={11} strokeWidth={2.5} />
-                                    )}
-                                  </div>
-                                  <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all">
-                                    <div className="flex items-center justify-between mb-1.5">
-                                      <span className="text-[9px] font-bold text-slate-400  tracking-widest">
-                                        {new Date(conv.date).toLocaleDateString(
-                                          [],
-                                          {
-                                            month: "short",
-                                            day: "numeric",
-                                            year: "numeric",
-                                          },
-                                        )}
-                                      </span>
-                                      <span
-                                        className={`text-[8px] font-bold  tracking-widest px-2 py-0.5 rounded-md ${
-                                          conv.type === "call"
-                                            ? "bg-success/10 text-success"
-                                            : conv.type === "meeting"
-                                              ? "bg-secondary/10 text-secondary"
-                                              : "bg-info/10 text-info"
-                                        }`}
-                                      >
-                                        {conv.type}
-                                      </span>
+                                      }`}
+                                    >
+                                      <Briefcase size={14} strokeWidth={2.5} />
                                     </div>
-                                    <p className="text-[12px] font-medium text-primary leading-relaxed">
-                                      {conv.description}
-                                    </p>
+                                    <div>
+                                      <h4 className="text-xs font-bold text-primary tracking-tight">
+                                        {group.projectName}
+                                      </h4>
+                                      <p className="text-[9px] font-bold text-slate-400  tracking-widest">
+                                        {group.interactions.length} conversations
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {group.projectStatus !== "N/A" && (
+                                    <span
+                                      className={`px-2.5 py-1 rounded-lg text-[8px] font-bold  tracking-widest border ${
+                                        group.projectStatus === "Active" || group.projectStatus === "Planning"
+                                          ? "bg-secondary/10 text-secondary border-secondary/20"
+                                          : group.projectStatus === "Completed"
+                                            ? "bg-success/10 text-success border-success/20"
+                                            : "bg-info/10 text-info border-info/20"
+                                      }`}
+                                    >
+                                      {group.projectStatus}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Conversations Timeline */}
+                                <div className="p-4">
+                                  <div className="relative border-l-2 border-slate-100 ml-3 space-y-4">
+                                    {group.interactions
+                                      .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                      .map((conv) => (
+                                        <div key={conv.id} className="ml-6 relative">
+                                          <div
+                                            className={`absolute -left-[33px] w-6 h-6 rounded-lg flex items-center justify-center text-white shadow-sm z-10 ${
+                                              conv.source === 'followup' ? "bg-success" :
+                                              conv.type === "email" ? "bg-info" : 
+                                              conv.type === "call" ? "bg-success" : 
+                                              conv.type === "meeting" ? "bg-secondary" : 
+                                              "bg-slate-400"
+                                            }`}
+                                          >
+                                            {conv.type === "call" ? (
+                                              <Phone size={11} strokeWidth={2.5} />
+                                            ) : conv.type === "meeting" ? (
+                                              <Calendar size={11} strokeWidth={2.5} />
+                                            ) : (
+                                              <Mail size={11} strokeWidth={2.5} />
+                                            )}
+                                          </div>
+                                          <div className={`${conv.source === 'followup' ? 'bg-success/5 border-success/20 shadow-sm shadow-success/5' : 'bg-slate-50/50 border-slate-100'} p-3 rounded-xl border transition-all`}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                              <span className="text-[9px] font-bold text-slate-400  tracking-widest">
+                                                {new Date(conv.date).toLocaleDateString(
+                                                  [],
+                                                  {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                    year: "numeric",
+                                                  },
+                                                )}
+                                                {" · "}
+                                                {new Date(conv.date).toLocaleTimeString([], {
+                                                  hour: '2-digit',
+                                                  minute: '2-digit',
+                                                  hour12: true
+                                                })}
+                                              </span>
+                                              <span
+                                                className={`text-[8px] font-bold  tracking-widest px-2 py-0.5 rounded-md ${
+                                                  conv.source === 'followup' ? 'bg-success/10 text-success' :
+                                                  conv.type === "call"
+                                                    ? "bg-success/10 text-success"
+                                                    : conv.type === "meeting"
+                                                      ? "bg-secondary/10 text-secondary"
+                                                      : "bg-info/10 text-info"
+                                                }`}
+                                              >
+                                                {conv.source === 'followup' ? 'FOLLOW-UP COMPLETED' : conv.type.toUpperCase()}
+                                              </span>
+                                            </div>
+                                            {conv.title && (
+                                              <p className="text-[10px] font-bold text-primary tracking-tight mb-1 opacity-70">
+                                                {conv.title}
+                                              </p>
+                                            )}
+                                            <div className="space-y-3">
+                                              {conv.source === 'followup' && conv.originalDescription && (
+                                                <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                                                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                                                    Planned Follow-up
+                                                  </p>
+                                                  <p className="text-[11px] text-slate-600 leading-relaxed font-medium capitalize">
+                                                    {conv.originalDescription}
+                                                  </p>
+                                                </div>
+                                              )}
+                                              <div>
+                                                {conv.source === 'followup' && (
+                                                  <p className="text-[8px] font-bold text-success uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
+                                                    Completion Summary
+                                                  </p>
+                                                )}
+                                                <p className="text-[12px] font-medium text-primary leading-relaxed">
+                                                  {conv.description}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            {conv.completedBy && (
+                                              <p className="text-[9px] font-bold text-slate-400 tracking-widest mt-2">
+                                                Completed by: {conv.completedBy}
+                                              </p>
+                                            )}
+                                          </div>
+                                        </div>
+                                      ))}
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
+                              </div>
+                            ))
+                          )}
                         </div>
-                      ));
+                      );
                     })()
+
                   )}
                 </div>
               )}
