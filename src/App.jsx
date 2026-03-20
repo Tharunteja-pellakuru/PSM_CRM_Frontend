@@ -1175,6 +1175,8 @@ function AppRoutes() {
                   status: nextStatus,
                   followup_status: nextStatus,
                   follow_brief: brief,
+                  completed_at: completed_at,
+                  completed_by: completed_by,
                 }
               : f,
           ),
