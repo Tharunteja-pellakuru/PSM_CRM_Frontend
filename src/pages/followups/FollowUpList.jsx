@@ -142,9 +142,7 @@ const FollowUpList = ({
 
   // Tab counts
   const tabCounts = {
-    All: typeFilter === "Lead" 
-      ? baseFiltered.length 
-      : baseFiltered.filter((f) => f.status !== "completed").length,
+    All: baseFiltered.filter((f) => f.status !== "completed").length,
     Overdue: baseFiltered.filter(
       (f) => isOverdue(f.dueDate) && f.status === "pending",
     ).length,

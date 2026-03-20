@@ -1519,12 +1519,7 @@ const Settings = ({
                                     label="Role"
                                     value={editAdminData.role}
                                     field={`edit_admin_role_${admin.id}`}
-                                    options={[
-                                      "Root Admin",
-                                      "Admin",
-                                      "Manager",
-                                      "Moderator",
-                                    ]}
+                                    options={["Admin", "Manager"]}
                                     onChange={(val) =>
                                       setEditAdminData({
                                         ...editAdminData,

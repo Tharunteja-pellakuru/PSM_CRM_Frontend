@@ -797,15 +797,15 @@ const EnquiryList = ({
                     "{enquiry.message}"
                   </p>
 
-                  {activeTab === "hold" && enquiry.holdReason && (
+                  {(activeTab === "hold" || activeTab === "dismissed") && enquiry.holdReason && (
                     <div className="mt-1 space-y-1.5 border-t border-slate-100 pt-3">
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-black text-slate-300 uppercase tracking-widest">
-                          Hold Reason
+                          {activeTab === "dismissed" ? "Remark" : "Hold Reason"}
                         </span>
                       </div>
-                      <div className="p-3 bg-amber-50/50 border border-amber-100/50 rounded-xl">
-                        <p className="text-[13px] font-bold text-amber-600 leading-relaxed italic">
+                      <div className={`p-3 border rounded-xl ${activeTab === "dismissed" ? "bg-slate-50/50 border-slate-200/50" : "bg-amber-50/50 border-amber-100/50"}`}>
+                        <p className={`text-[13px] font-bold leading-relaxed italic ${activeTab === "dismissed" ? "text-slate-500" : "text-amber-600"}`}>
                           {enquiry.holdReason}
                         </p>
                       </div>

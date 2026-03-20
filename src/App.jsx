@@ -330,6 +330,7 @@ function AppRoutes() {
           message: e.message,
           status: e.status?.toLowerCase() || "new",
           remarks: e.remarks || "",
+          holdReason: e.remarks || "",
           date: e.created_at || new Date().toISOString(),
         }));
         setEnquiries(transformedEnquiries);
@@ -437,8 +438,11 @@ function AppRoutes() {
         // Remove from local state after successful API call
         setLeads((prev) => prev.filter((l) => l.id != id));
 
-        // Also update clients array to keep them in sync
+        // Also update clients array and enquiries array to keep them in sync
         setClients((prev) => prev.filter((c) => c.id != id));
+        if (leadToDelete.enquiry_id) {
+          setEnquiries((prev) => prev.filter((e) => e.id != leadToDelete.enquiry_id));
+        }
       } else {
         const errorData = await res.json();
         console.error("Failed to delete lead:", errorData);
@@ -461,6 +465,7 @@ function AppRoutes() {
           message: data.notes || "",
           website_url: data.website || "",
           country: data.country || "",
+          enquiry_id: data.enquiry_id || null,
           lead_category:
             data.projectCategory || data.leadCategory || REVERSE_CATEGORY_MAP[data.industry] || 1,
         };
@@ -695,14 +700,7 @@ function AppRoutes() {
 
   async function handleUpdateConvertedLead(id, data) {
     try {
-      // 1. Find associated client and project
-      const client = clients.find((c) => c.lead_id == id);
-      if (!client) throw new Error("Client not found for this lead");
-
-      const project = projects.find((p) => p.clientId == client.id);
-      if (!project) console.warn("Project not found for this client");
-
-      // 2. Update Lead Details (Name, Email, Phone, Category, Country)
+      // 1. Update Lead Details (Name, Email, Phone, Category, Country)
       const leadPayload = {
         full_name: data.name,
         email: data.email,
@@ -1394,6 +1392,10 @@ function AppRoutes() {
 
     // Handle object argument from some components
     if (typeof id === 'object' && id !== null) {
+      if (id.status === undefined) {
+        // Handle non-status updates (like aiAnalysis) locally
+        return handleUpdateEnquiry(id);
+      }
       actualId = id.id;
       actualStatus = id.status;
       actualRemarks = id.holdReason || id.remarks || "";
@@ -1415,7 +1417,7 @@ function AppRoutes() {
         }
 
         setEnquiries((prev) =>
-          prev.map((e) => (e.id == actualId ? { ...e, status: actualStatus.toLowerCase(), remarks: actualRemarks } : e))
+          prev.map((e) => (e.id == actualId ? { ...e, status: actualStatus.toLowerCase(), remarks: actualRemarks, holdReason: actualRemarks } : e))
         );
         toast.success(`Enquiry marked as ${actualStatus}!`);
       } else {
@@ -1436,6 +1438,8 @@ function AppRoutes() {
 
       if (res.ok) {
         setEnquiries((prev) => prev.filter((e) => e.id != id));
+        setLeads((prev) => prev.filter((l) => l.enquiry_id != id));
+        setClients((prev) => prev.filter((c) => c.enquiry_id != id));
         toast.success("Enquiry deleted successfully!");
       } else {
         toast.error("Failed to delete enquiry.");
@@ -1556,7 +1560,7 @@ function AppRoutes() {
               onPromote={handlePromoteEnquiry}
               onDismiss={(id) => handleUpdateEnquiryStatus(id, "Dismissed")}
               onHold={(id) => handleUpdateEnquiryStatus(id, "Hold")}
-              onRestore={(id) => handleUpdateEnquiryStatus(id, "New")}
+              onRestore={(id) => handleUpdateEnquiryStatus(id, "New", "")}
               onDelete={handleDeleteEnquiry}
               onDeleteAll={() => {
                 const dismissed = enquiries.filter(e => e.status === "dismissed");
