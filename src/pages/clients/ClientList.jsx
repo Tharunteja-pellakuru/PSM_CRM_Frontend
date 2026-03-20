@@ -668,9 +668,17 @@ const ClientList = ({
                             className={`w-2 h-2 rounded-full ${client.projectCategory === 1 ? "bg-secondary" : client.projectCategory === 2 ? "bg-blue-400" : client.projectCategory === 3 ? "bg-purple-400" : "bg-slate-300"}`}
                           />
                           <span className="text-sm font-bold text-primary">
-                            {CATEGORY_MAP[client.projectCategory] ||
-                              client.industry ||
-                              "Other"}
+                            {(() => {
+                              const catName = CATEGORY_MAP[client.projectCategory] || client.industry || "Other";
+                              if (catName === "Other" || catName === "others") {
+                                console.log("Category mismatch for client:", client.name, {
+                                  projectCategory: client.projectCategory,
+                                  industry: client.industry,
+                                  catName
+                                });
+                              }
+                              return catName;
+                            })()}
                           </span>
                         </div>
                       </td>

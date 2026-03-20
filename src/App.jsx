@@ -189,6 +189,7 @@ function AppRoutes() {
 
         // Extract leads array from response
         const leadsArray = Array.isArray(data) ? data : data.leads || [];
+        console.log("Raw leads data fetched:", leadsArray);
 
         // Transform API data to match component expected format
         const transformedLeads = leadsArray.map((lead) => ({
@@ -272,6 +273,7 @@ function AppRoutes() {
     })
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
+        console.log("Raw clients data fetched:", data);
         const transformedClients = data.map((c) => ({
           id: c.id?.toString() || c.client_id?.toString(),
           name: c.name || c.client_name,

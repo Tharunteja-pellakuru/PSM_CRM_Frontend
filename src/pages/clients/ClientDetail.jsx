@@ -1025,9 +1025,17 @@ const ClientDetail = ({
                           Project Category
                         </h3>
                         <p className="text-lg font-bold text-primary tracking-tight ">
-                          {CATEGORY_MAP[client.projectCategory] ||
-                            client.industry ||
-                            "Tech"}
+                          {(() => {
+                            const catName = CATEGORY_MAP[client.projectCategory] || client.industry || "Tech";
+                            if (catName === "Other" || catName === "others" || catName === "Tech" && !CATEGORY_MAP[client.projectCategory]) {
+                              console.log("Category mismatch for client detail:", client.name, {
+                                projectCategory: client.projectCategory,
+                                industry: client.industry,
+                                catName
+                              });
+                            }
+                            return catName;
+                          })()}
                         </p>
                       </div>
                       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 group relative overflow-hidden hover:shadow-md hover:border-secondary/30 transition-all">

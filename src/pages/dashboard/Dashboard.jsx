@@ -121,7 +121,7 @@ function Dashboard({ followUps, clients, leads = [], enquiries, aiModels = [], o
 
         const monthlyLeads = leads.filter(l => {
           const d = new Date(l.joinedDate);
-          return d.getFullYear() === yearNum && d.getMonth() === index;
+          return l.status === "Lead" && d.getFullYear() === yearNum && d.getMonth() === index;
         }).length;
 
         // Engagement rate: (Clients / (Enquiries + Leads)) * 100
@@ -156,7 +156,7 @@ function Dashboard({ followUps, clients, leads = [], enquiries, aiModels = [], o
 
       const weeklyLeads = leads.filter(l => {
         const d = new Date(l.joinedDate);
-        return d.getFullYear() === yearNum && d.getMonth() === monthIndex && d.getDate() >= startDay && d.getDate() <= endDay;
+        return l.status === "Lead" && d.getFullYear() === yearNum && d.getMonth() === monthIndex && d.getDate() >= startDay && d.getDate() <= endDay;
       }).length;
 
       const totalPotential = weeklyEnquiries + weeklyLeads;
