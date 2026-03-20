@@ -268,6 +268,8 @@ const EnquiryList = ({
       if (hideIrrelevant && isIrrelevant) matchesTab = false;
     } else if (activeTab === "hold" || activeTab === "onHold") {
       matchesTab = e.status === "hold" || e.status === "onHold";
+    } else if (activeTab === "converted") {
+      matchesTab = e.status === "converted";
     } else if (activeTab === "dismissed") {
       matchesTab = e.status === "dismissed" || e.status === "irrelevant";
       // Show irrelevant from Inbox if spam filter is ON
