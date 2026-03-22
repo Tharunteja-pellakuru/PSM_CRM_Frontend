@@ -179,7 +179,7 @@ const ClientDetail = ({
   const fetchClientFollowups = async () => {
     try {
       const response = await fetch(
-        `${BASE_URL}/client-followups/${client.id}`,
+        `${BASE_URL}/api/client-followups/${client.id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
