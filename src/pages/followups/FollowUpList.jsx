@@ -301,7 +301,26 @@ const FollowUpList = ({
           </div>
           <div className="w-full sm:w-auto">
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setFormData({
+                  clientId: "",
+                  title: "",
+                  description: "",
+                  followup_date: new Date().toLocaleDateString("en-CA"),
+                  timeHour: "12",
+                  timeMinute: "00",
+                  timePeriod: "PM",
+                  followup_status: "pending",
+                  priority: "Medium",
+                  completionBrief: "",
+                  completionDate: new Date().toLocaleDateString("en-CA"),
+                  completionHour: "12",
+                  completionMinute: "00",
+                  completionPeriod: "PM",
+                  completed_by: "",
+                });
+                setShowAddModal(true);
+              }}
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-2xl hover:bg-slate-800 transition-all text-[13px] font-bold  tracking-wider shadow-lg active:scale-95 group"
             >
               <Plus
@@ -1477,8 +1496,11 @@ const FollowUpList = ({
                               "cancelled",
                             ]
                               .filter((status) => {
-                                if (formData.id && formData.followup_status === "completed") {
-                                  return status === "completed";
+                                if (formData.id) {
+                                  const originalFollowup = followUps.find(f => f.id == formData.id);
+                                  if (originalFollowup?.status === "completed") {
+                                    return status === "completed";
+                                  }
                                 }
                                 return true;
                               })

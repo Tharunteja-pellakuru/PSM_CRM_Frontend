@@ -497,7 +497,6 @@ function AppRoutes() {
             projectCategory:
               result.lead?.lead_category || data.projectCategory || 1,
             industry: result.lead?.lead_category || data.projectCategory || 1,
-            projectCategory: result.lead?.lead_category || data.projectCategory || 1,
             country: result.lead?.country || data.country || "",
             state: result.lead?.state || data.state || "",
             currency: result.lead?.currency || data.currency || "",

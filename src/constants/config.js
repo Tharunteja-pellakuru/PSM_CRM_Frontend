@@ -1,5 +1,5 @@
 // Central configuration for API and other constants
-export const BASE_URL = "http://localhost:5000";
+export const BASE_URL = "https://psm-crm-backend.onrender.com";
 
 // API Endpoints
 export const API_ENDPOINTS = {
