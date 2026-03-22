@@ -25,6 +25,7 @@
   "devDependencies": {
     "vite": "^6.2.0"
   },
+  "engines": {
     "node": "24.x"
   }
 }
