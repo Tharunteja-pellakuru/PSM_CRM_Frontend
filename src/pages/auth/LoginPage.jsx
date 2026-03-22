@@ -10,6 +10,7 @@ import {
   Leaf,
 } from "lucide-react";
 import logoImg from "../../assets/Parivartan_Logo.png";
+import { BASE_URL } from "../../constants/config";
 
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("crm@eparivartan.com");
@@ -31,7 +32,7 @@ function LoginPage({ onLogin }) {
     setError(null);
 
     try {
-      const res = await fetch("http://localhost:5000/api/login", {
+      const res = await fetch(`${BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

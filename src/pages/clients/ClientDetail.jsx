@@ -46,6 +46,7 @@ import {
   CATEGORY_MAP,
   REVERSE_CATEGORY_MAP,
 } from "../../constants/categoryConstants";
+import { BASE_URL } from "../../constants/config";
 
 const ClientDetail = ({
   client,
@@ -131,7 +132,7 @@ const ClientDetail = ({
         } else {
           // Check if client.country is a country name (e.g., "India")
           const countryByName = countries.find(
-            (c) => c.name.toLowerCase() === client.country.toLowerCase()
+            (c) => c.name.toLowerCase() === client.country.toLowerCase(),
           );
           if (countryByName) {
             usedCountryCode = countryByName.code;
@@ -171,17 +172,20 @@ const ClientDetail = ({
 
   useEffect(() => {
     if (client && client.id) {
-       fetchClientFollowups();
+      fetchClientFollowups();
     }
   }, [client]);
 
   const fetchClientFollowups = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/client-followups/${client.id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await fetch(
+        `${BASE_URL}/client-followups/${client.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
       if (response.ok) {
         const data = await response.json();
         setClientFollowUps(data);
@@ -193,7 +197,9 @@ const ClientDetail = ({
 
   const clientProjects = projects.filter((p) => p.clientId == client.id);
   const clientActivities = activities.filter(
-    (a) => a.clientId == client.id || (client.lead_id && a.clientId == client.lead_id),
+    (a) =>
+      a.clientId == client.id ||
+      (client.lead_id && a.clientId == client.lead_id),
   );
   const completedFollowUps = clientFollowUps.filter(
     (f) => f.status === "completed",
@@ -207,7 +213,8 @@ const ClientDetail = ({
         clientId: client.id,
         type: logData.type,
         description: logData.description,
-        projectName: clientProjects.find(p => p.id === logData.projectId)?.name || "",
+        projectName:
+          clientProjects.find((p) => p.id === logData.projectId)?.name || "",
         projectId: logData.projectId,
         date: combinedDateTime.toISOString(),
       });
@@ -1026,13 +1033,25 @@ const ClientDetail = ({
                         </h3>
                         <p className="text-lg font-bold text-primary tracking-tight ">
                           {(() => {
-                            const catName = CATEGORY_MAP[client.projectCategory] || client.industry || "Tech";
-                            if (catName === "Other" || catName === "others" || catName === "Tech" && !CATEGORY_MAP[client.projectCategory]) {
-                              console.log("Category mismatch for client detail:", client.name, {
-                                projectCategory: client.projectCategory,
-                                industry: client.industry,
-                                catName
-                              });
+                            const catName =
+                              CATEGORY_MAP[client.projectCategory] ||
+                              client.industry ||
+                              "Tech";
+                            if (
+                              catName === "Other" ||
+                              catName === "others" ||
+                              (catName === "Tech" &&
+                                !CATEGORY_MAP[client.projectCategory])
+                            ) {
+                              console.log(
+                                "Category mismatch for client detail:",
+                                client.name,
+                                {
+                                  projectCategory: client.projectCategory,
+                                  industry: client.industry,
+                                  catName,
+                                },
+                              );
                             }
                             return catName;
                           })()}
@@ -1052,7 +1071,9 @@ const ClientDetail = ({
                       <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 group relative overflow-hidden hover:shadow-md hover:border-secondary/30 transition-all">
                         <div className="w-8 h-8 bg-green-500/10 text-green-600 rounded-xl flex items-center justify-center mb-3 group-hover:bg-green-600 group-hover:text-white transition-all border border-green-500/20">
                           <span className="text-xs font-bold leading-none">
-                            {commonCurrencies.find(c => c.code === client.currency)?.symbol || "$"}
+                            {commonCurrencies.find(
+                              (c) => c.code === client.currency,
+                            )?.symbol || "$"}
                           </span>
                         </div>
                         <h3 className="text-[14px] font-bold text-slate-400  tracking-widest mb-1">
@@ -1307,11 +1328,11 @@ const ClientDetail = ({
                     /* Client: Project-wise conversations */
                     (() => {
                       // 1. Initialize result with actual projects for this client
-                      const projectGroups = clientProjects.map(p => ({
+                      const projectGroups = clientProjects.map((p) => ({
                         id: p.id,
                         projectName: p.name,
                         projectStatus: p.status,
-                        interactions: []
+                        interactions: [],
                       }));
 
                       // 2. Add an "Other / General" group for interactions without a project
@@ -1320,49 +1341,59 @@ const ClientDetail = ({
                       // 3. Helper to find or add to group
                       const addToGroup = (interaction) => {
                         const targetProject = projectGroups.find(
-                          (p) => 
-                            (interaction.projectId && p.id == interaction.projectId) ||
-                            (interaction.projectName && p.projectName === interaction.projectName)
+                          (p) =>
+                            (interaction.projectId &&
+                              p.id == interaction.projectId) ||
+                            (interaction.projectName &&
+                              p.projectName === interaction.projectName),
                         );
                         if (targetProject) {
-                           targetProject.interactions.push(interaction);
+                          targetProject.interactions.push(interaction);
                         } else {
-                           generalInteractions.push(interaction);
+                          generalInteractions.push(interaction);
                         }
                       };
 
                       // 4. Distribute real activities
-                      clientActivities.forEach(a => addToGroup({
-                        id: a.id,
-                        type: a.type,
-                        date: a.date,
-                        description: a.description,
-                        projectName: a.projectName,
-                        projectId: a.projectId,
-                        source: 'activity'
-                      }));
+                      clientActivities.forEach((a) =>
+                        addToGroup({
+                          id: a.id,
+                          type: a.type,
+                          date: a.date,
+                          description: a.description,
+                          projectName: a.projectName,
+                          projectId: a.projectId,
+                          source: "activity",
+                        }),
+                      );
 
                       // 5. Distribute completed follow-ups (Summaries)
-                      completedFollowUps.forEach(f => addToGroup({
-                        id: `fu-${f.id}`,
-                        type: (f.followup_mode || 'call').toLowerCase(),
-                        date: f.completed_at || f.dueDate,
-                        description: f.follow_brief || "No summary provided",
-                        originalDescription: f.description,
-                        title: f.title,
-                        completedBy: f.completed_by,
-                        projectName: f.projectName,
-                        projectId: f.projectId,
-                        source: 'followup'
-                      }));
+                      completedFollowUps.forEach((f) =>
+                        addToGroup({
+                          id: `fu-${f.id}`,
+                          type: (f.followup_mode || "call").toLowerCase(),
+                          date: f.completed_at || f.dueDate,
+                          description: f.follow_brief || "No summary provided",
+                          originalDescription: f.description,
+                          title: f.title,
+                          completedBy: f.completed_by,
+                          projectName: f.projectName,
+                          projectId: f.projectId,
+                          source: "followup",
+                        }),
+                      );
 
                       const allGroups = [
                         ...projectGroups,
-                        ...(generalInteractions.length > 0 ? [{
-                          projectName: "General / Other",
-                          projectStatus: "N/A",
-                          interactions: generalInteractions
-                        }] : [])
+                        ...(generalInteractions.length > 0
+                          ? [
+                              {
+                                projectName: "General / Other",
+                                projectStatus: "N/A",
+                                interactions: generalInteractions,
+                              },
+                            ]
+                          : []),
                       ];
 
                       return (
@@ -1384,7 +1415,8 @@ const ClientDetail = ({
                                   <div className="flex items-center gap-3">
                                     <div
                                       className={`w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-sm ${
-                                        group.projectStatus === "Active" || group.projectStatus === "Planning"
+                                        group.projectStatus === "Active" ||
+                                        group.projectStatus === "Planning"
                                           ? "bg-secondary"
                                           : group.projectStatus === "Completed"
                                             ? "bg-success"
@@ -1398,14 +1430,16 @@ const ClientDetail = ({
                                         {group.projectName}
                                       </h4>
                                       <p className="text-[14px] font-bold text-slate-400  tracking-widest">
-                                        {group.interactions.length} conversations
+                                        {group.interactions.length}{" "}
+                                        conversations
                                       </p>
                                     </div>
                                   </div>
                                   {group.projectStatus !== "N/A" && (
                                     <span
                                       className={`px-2.5 py-1 rounded-lg text-[13px] font-bold  tracking-widest border ${
-                                        group.projectStatus === "Active" || group.projectStatus === "Planning"
+                                        group.projectStatus === "Active" ||
+                                        group.projectStatus === "Planning"
                                           ? "bg-secondary/10 text-secondary border-secondary/20"
                                           : group.projectStatus === "Completed"
                                             ? "bg-success/10 text-success border-success/20"
@@ -1421,55 +1455,80 @@ const ClientDetail = ({
                                 <div className="p-4">
                                   <div className="relative border-l-2 border-slate-100 ml-3 space-y-4">
                                     {group.interactions
-                                      .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                      .sort(
+                                        (a, b) =>
+                                          new Date(b.date) - new Date(a.date),
+                                      )
                                       .map((conv) => (
-                                        <div key={conv.id} className="ml-6 relative">
+                                        <div
+                                          key={conv.id}
+                                          className="ml-6 relative"
+                                        >
                                           <div
                                             className={`absolute -left-[33px] w-6 h-6 rounded-lg flex items-center justify-center text-white shadow-sm z-10 ${
-                                              conv.source === 'followup' ? "bg-success" :
-                                              conv.type === "email" ? "bg-info" : 
-                                              conv.type === "call" ? "bg-success" : 
-                                              conv.type === "meeting" ? "bg-secondary" : 
-                                              "bg-slate-400"
+                                              conv.source === "followup"
+                                                ? "bg-success"
+                                                : conv.type === "email"
+                                                  ? "bg-info"
+                                                  : conv.type === "call"
+                                                    ? "bg-success"
+                                                    : conv.type === "meeting"
+                                                      ? "bg-secondary"
+                                                      : "bg-slate-400"
                                             }`}
                                           >
                                             {conv.type === "call" ? (
-                                              <Phone size={11} strokeWidth={2.5} />
+                                              <Phone
+                                                size={11}
+                                                strokeWidth={2.5}
+                                              />
                                             ) : conv.type === "meeting" ? (
-                                              <Calendar size={11} strokeWidth={2.5} />
+                                              <Calendar
+                                                size={11}
+                                                strokeWidth={2.5}
+                                              />
                                             ) : (
-                                              <Mail size={11} strokeWidth={2.5} />
+                                              <Mail
+                                                size={11}
+                                                strokeWidth={2.5}
+                                              />
                                             )}
                                           </div>
-                                          <div className={`${conv.source === 'followup' ? 'bg-success/5 border-success/20 shadow-sm shadow-success/5' : 'bg-slate-50/50 border-slate-100'} p-3 rounded-xl border transition-all`}>
+                                          <div
+                                            className={`${conv.source === "followup" ? "bg-success/5 border-success/20 shadow-sm shadow-success/5" : "bg-slate-50/50 border-slate-100"} p-3 rounded-xl border transition-all`}
+                                          >
                                             <div className="flex items-center justify-between mb-1.5">
                                               <span className="text-[14px] font-bold text-slate-400  tracking-widest">
-                                                {new Date(conv.date).toLocaleDateString(
-                                                  [],
-                                                  {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                  },
-                                                )}
+                                                {new Date(
+                                                  conv.date,
+                                                ).toLocaleDateString([], {
+                                                  month: "short",
+                                                  day: "numeric",
+                                                  year: "numeric",
+                                                })}
                                                 {" · "}
-                                                {new Date(conv.date).toLocaleTimeString([], {
-                                                  hour: '2-digit',
-                                                  minute: '2-digit',
-                                                  hour12: true
+                                                {new Date(
+                                                  conv.date,
+                                                ).toLocaleTimeString([], {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                  hour12: true,
                                                 })}
                                               </span>
                                               <span
                                                 className={`text-[13px] font-bold  tracking-widest px-2 py-0.5 rounded-md ${
-                                                  conv.source === 'followup' ? 'bg-success/10 text-success' :
-                                                  conv.type === "call"
+                                                  conv.source === "followup"
                                                     ? "bg-success/10 text-success"
-                                                    : conv.type === "meeting"
-                                                      ? "bg-secondary/10 text-secondary"
-                                                      : "bg-info/10 text-info"
+                                                    : conv.type === "call"
+                                                      ? "bg-success/10 text-success"
+                                                      : conv.type === "meeting"
+                                                        ? "bg-secondary/10 text-secondary"
+                                                        : "bg-info/10 text-info"
                                                 }`}
                                               >
-                                                {conv.source === 'followup' ? 'FOLLOW-UP COMPLETED' : conv.type.toUpperCase()}
+                                                {conv.source === "followup"
+                                                  ? "FOLLOW-UP COMPLETED"
+                                                  : conv.type.toUpperCase()}
                                               </span>
                                             </div>
                                             {conv.title && (
@@ -1478,19 +1537,20 @@ const ClientDetail = ({
                                               </p>
                                             )}
                                             <div className="space-y-3">
-                                              {conv.source === 'followup' && conv.originalDescription && (
-                                                <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
-                                                  <p className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                                                    Planned Follow-up
-                                                  </p>
-                                                  <p className="text-[13px] text-slate-600 leading-relaxed font-medium capitalize">
-                                                    {conv.originalDescription}
-                                                  </p>
-                                                </div>
-                                              )}
+                                              {conv.source === "followup" &&
+                                                conv.originalDescription && (
+                                                  <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg">
+                                                    <p className="text-[13px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                                                      Planned Follow-up
+                                                    </p>
+                                                    <p className="text-[13px] text-slate-600 leading-relaxed font-medium capitalize">
+                                                      {conv.originalDescription}
+                                                    </p>
+                                                  </div>
+                                                )}
                                               <div>
-                                                {conv.source === 'followup' && (
+                                                {conv.source === "followup" && (
                                                   <p className="text-[13px] font-bold text-success uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-success"></span>
                                                     Completion Summary
@@ -1517,7 +1577,6 @@ const ClientDetail = ({
                         </div>
                       );
                     })()
-
                   )}
                 </div>
               )}
@@ -1544,8 +1603,10 @@ const ClientDetail = ({
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-[12px] font-bold text-primary">
-                          {commonCurrencies.find(c => c.code === client.currency)?.symbol || "$"} {(project.budget / 1000).toFixed(0)}
-                          k
+                          {commonCurrencies.find(
+                            (c) => c.code === client.currency,
+                          )?.symbol || "$"}{" "}
+                          {(project.budget / 1000).toFixed(0)}k
                         </p>
                         <p className="text-[13px] font-bold text-slate-400  tracking-widest mt-1">
                           {project.status}
